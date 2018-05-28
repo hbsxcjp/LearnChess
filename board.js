@@ -2,7 +2,7 @@
 
 //import {Piece, Pieces} from './piece.js';
 
-const { BOTTOM_SIDE, TOP_SIDE,
+const { BOTTOM, TOP,
         NumRows, NumCols, MaxColNo, MinColNo,
         NumToChinese, ChineseToNum, FEN } = constValue();
 
@@ -34,9 +34,10 @@ class Board {
     static getSameColSeats(seat, othseat) {
         let seats = new Array();
         let step = seat < othseat ? NumCols : -NumCols;
-        compare = ((i, j) => {
+
+        function compare (i, j) {
             return step > 0 ? i < j : i > j;
-        }); // 定义比较函数
+        }; // 定义比较函数
         for (let i = seat + step; compare(i, othseat); i += step) {
             seats.push(i);
         }
@@ -49,25 +50,35 @@ class Board {
     
     static getAdvisorMoveSeats(seat) {
         return [seat + NumCols + 1, seat + NumCols - 1,
-        seat - NumCols + 1, seat - NumCols - 1];
+                seat - NumCols + 1, seat - NumCols - 1];
     }
 
     // 获取移动、象心行列值
-    static getBishopMove_CenSeats (seat) {
-        let mvseats = [seat + 2 * NumCols + 2, seat - 2 * NumCols + 2,
-                seat + 2 * NumCols - 2, seat - 2 * NumCols - 2];
-        let col = this.getcol(seat);
+    static getBishopMove_CenSeats(seat) {
+        let row = this.getRow(seat);
+        let col = this.getCol(seat);
+        let mvseats;
         if (col == MaxColNo) {
-            mvseats = mvseats.slice(2);
+            mvseats = [seat + 2 * NumCols - 2, seat - 2 * NumCols - 2];
         }
         else if (col == MinColNo) {
-            mvseats = mvseats.slice(0, 2);
+            mvseats = [seat + 2 * NumCols + 2, seat - 2 * NumCols + 2];
         }
-        return mvseats.map(s => {return [s, (seat + s) / 2];});
+        else if (row == 0 || row == 5) {
+            mvseats = [seat + 2 * NumCols + 2, seat + 2 * NumCols - 2]
+        }
+        else if (row == 4 || row == 9) {
+            mvseats = [seat - 2 * NumCols + 2, seat - 2 * NumCols - 2]
+        }
+        else {
+            mvseats = [seat + 2 * NumCols + 2, seat - 2 * NumCols + 2, 
+                    seat + 2 * NumCols - 2, seat - 2 * NumCols - 2];
+        }
+        return mvseats.map(s => [s, (seat + s) / 2]);
     }
 
     // 获取移动、马腿行列值
-    static getKnightMove_LegSeats (seat) {
+    static getKnightMove_LegSeats(seat) {
         function _leg(first, to) {
             let x = to - first;
             if (x > NumCols + 2) {
@@ -84,24 +95,48 @@ class Board {
             }
         }
 
-        let col = this.getcol(seat);
-        let mvseats = [seat + NumCols + 2, seat - NumCols + 2,
-            seat + 2 * NumCols + 1, seat - 2 * NumCols + 1,
-            seat + 2 * NumCols - 1, seat - 2 * NumCols - 1,
-            seat + NumCols - 2, seat - NumCols - 2];
-        if (col == MaxColNo) {
-            mvseats = mvseats.slice(4);
+        let EN = seat + NumCols + 2, 
+            ES = seat - NumCols + 2,
+            SE = seat - 2 * NumCols + 1,
+            SW = seat - 2 * NumCols - 1,
+            WS = seat - NumCols - 2,
+            WN = seat + NumCols - 2,
+            NW = seat + 2 * NumCols - 1, 
+            NE = seat + 2 * NumCols + 1;
+        let mvseats, seats;
+        switch(this.getCol(seat)) {
+            case MaxColNo: 
+                mvseats = [SW, WS, WN, NW];
+                break;
+            case MaxColNo - 1:
+                mvseats = [SE, SW, WS, WN, NW, NE];
+                break;
+            case MinColNo:
+                mvseats = [EN, ES, SE, NE];
+                break;
+            case MinColNo + 1:
+                mvseats = [EN, ES, SE, SW, NW, NE];
+                break;
+            default:
+                mvseats = [EN, ES, SE, SW, WS, WN, NW, NE];
         }
-        else if (col == MaxColNo - 1) {
-            mvseats = mvseats.slice(2);
+        switch (this.getRow(seat)) {
+            case 9:
+                seats = new Set([ES, SE, SW, WS]);
+                break;
+            case 8:
+                seats = new Set([EN, ES, SE, SW, WS, WN]);
+                break;
+            case 0:
+                seats = new Set([EN, WN, NW, NE]);
+                break;
+            case 1:
+                seats = new Set([EN, ES, WS, WN, NW, NE]);
+                break;
+            default:
+                seats = new Set([EN, ES, SE, SW, WS, WN, NW, NE]);
         }
-        else if (col == MinColNo) {
-            mvseats = mvseats.slice(0, 4);
-        }
-        else if (col == MinColNo + 1) {
-            mvseats = mvseats.slice(0, 6);
-        }
-        return mvseats.map(s => {return [s, _leg(seat, mvseats[i])];});
+        return mvseats.filter(s => seats.has(s)).map(s => [s, _leg(seat, s)]);
     }
 
     // 车炮可走的四个方向位置
@@ -127,7 +162,7 @@ class Board {
 
     static getPawnMoveSeats(seat) {
         mvseats = [seat + 1, seat + NumCols, seat - NumCols, seat - 1];
-        let col = this.getcol(seat); //this指类，而不是实例
+        let col = this.getCol(seat); //this指类，而不是实例
         if (col == MaxColNo) {
             return mvseats.slice(1);
         }
@@ -137,28 +172,28 @@ class Board {
     }
 
     constructor() {
-        this.pieSeats = new Array(90);
+        this.seats = new Array(90);
 
     }
 
     getSide(color) {
-        return BOTTOM_SIDE; // 待完善！
+        return BOTTOM; // 待完善！
     }
 
     getPiece(seat) {
-        return this.pieSeats[seat];
+        return this.seats[seat];
     }
     
     getColor(seat) {
-        return this.pieSeats[seat].color;
+        return this.seats[seat].color;
     }
 
     getSeat(piece) {
-        return this.pieSeats.indexof(piece);
+        return this.seats.indexof(piece);
     }
 
     isBlank(seat) {
-        return boolean(this.pieSeats[seat]);
+        return boolean(this.seats[seat]);
     }
 
 
@@ -180,8 +215,8 @@ Object.defineProperties(board, {
     
     kingSeats: {
         value: {
-            BOTTOM_SIDE: [21, 22, 23, 12, 13, 14, 3, 4, 5],
-            TOP_SIDE: [84, 85, 86, 75, 76, 77, 66, 67, 68]
+            BOTTOM: [21, 22, 23, 12, 13, 14, 3, 4, 5],
+            TOP: [84, 85, 86, 75, 76, 77, 66, 67, 68]
         },
         writable: false, 
         enumerable: true,
@@ -190,8 +225,8 @@ Object.defineProperties(board, {
 
     advisorSeats: {
         value: {
-            BOTTOM_SIDE: [21, 23, 13, 3, 5],
-            TOP_SIDE: [84, 86, 76, 66, 68]
+            BOTTOM: [21, 23, 13, 3, 5],
+            TOP: [84, 86, 76, 66, 68]
         },
         writable: false, 
         enumerable: true,
@@ -200,8 +235,8 @@ Object.defineProperties(board, {
     
     bishopSeats: {
         value: {
-            BOTTOM_SIDE: [2, 6, 18, 22, 26, 38, 42],
-            TOP_SIDE: [47, 51, 63, 67, 71, 83, 87]
+            BOTTOM: [2, 6, 18, 22, 26, 38, 42],
+            TOP: [47, 51, 63, 67, 71, 83, 87]
         },
         writable: false, 
         enumerable: true,
@@ -210,8 +245,8 @@ Object.defineProperties(board, {
     
     pawnSeats: {
         value: {
-            TOP_SIDE: range(0, 45).concat([45, 47, 49, 51, 53, 54, 56, 58, 60, 62]),
-            BOTTOM_SIDE: range(45, 90).concat([27, 29, 31, 33, 35, 36, 38, 40, 42, 44])
+            TOP: range(0, 45).concat([45, 47, 49, 51, 53, 54, 56, 58, 60, 62]),
+            BOTTOM: range(45, 90).concat([27, 29, 31, 33, 35, 36, 38, 40, 42, 44])
         },
         writable: false, 
         enumerable: true,
@@ -220,8 +255,8 @@ Object.defineProperties(board, {
 });
 
 function constValue() {
-    const BOTTOM_SIDE = 'bottom';
-    const TOP_SIDE = 'top';
+    const BOTTOM = 'bottom';
+    const TOP = 'top';
     const NumCols = 9;
     const NumRows = 10;
     const MinColNo = 0;
@@ -246,7 +281,7 @@ function constValue() {
         '进': 1, '退': -1, '平': 0
     };
     const FEN = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r - - 0 1';
-    return { BOTTOM_SIDE, TOP_SIDE,
+    return { BOTTOM, TOP,
             NumCols, NumRows, MaxColNo, MinColNo,
             NumToChinese, ChineseToNum, FEN };
 }
