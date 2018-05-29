@@ -52,14 +52,14 @@ class Piece {
 
     // 筛除被棋子阻挡的目标位置
     filterObstacleSeats(m_bSeats, board) {
-        return m_bSeats.filter(ss => board.isBlank(ss[1])).map(s => s[0]);
+        return m_bBoard.filter(ss => board.isBlank(ss[1])).map(s => s[0]);
     }
     
     // 筛除超出可置入位置、本方棋子占用位置
     filterSeats(moveSeats, board) {
         let seats = new Set(this.getCanSeats(board));
-        return moveSeats.filter(
-            s => seats.has(s)).filter(
+        return moveBoard.filter(
+            s => Board.has(s)).filter(
                 s => board.getColor(s) != this._color);
     }
 
@@ -122,11 +122,11 @@ class Rook extends Piece {
         for (const seatLine of seatLines) {
             for (const seat of seatLine) {
                 if (board.isBlank(seat)) {
-                    moveSeats.push(seat);
+                    moveBoard.push(seat);
                 }
                 else {
                     if (board.getColor(seat) != this._color) {
-                        moveSeats.push(seat);
+                        moveBoard.push(seat);
                     }
                     break;
                 }
@@ -145,7 +145,7 @@ class Cannon extends Piece {
             for (const seat of seatLine) {
                 if (!skip) {
                     if (board.isBlank(seat)) {
-                        moveSeats.push(seat);
+                        moveBoard.push(seat);
                     }
                     else {
                         skip = true;
@@ -153,7 +153,7 @@ class Cannon extends Piece {
                 }
                 else if (!board.isBlank(seat)) {
                     if (board.getColor(seat) != this._color) {
-                            moveSeats.push(seat);
+                            moveBoard.push(seat);
                     }
                     break;
                 }
@@ -176,7 +176,7 @@ class Pawn extends Piece {
         for (let s of this.filterSeats(Board.getPawnMoveSeats(board.getSeat(this)))) {
             r = Board.getRow(s);
             if ((isBottomSide && r >= row) || (!isBottomSide && r <= row)) {
-                moveSeats.push(s);
+                moveBoard.push(s);
             }
         }
         return moveSeats;
@@ -185,21 +185,118 @@ class Pawn extends Piece {
  
 // 一副棋子类
 class Pieces {
-    constructor() {
-        const pieceChars = ['K', 'A', 'A', 'B', 'B', 'N', 'N', 'R', 'R',
-            'C', 'C', 'P', 'P', 'P', 'P', 'P',
-            'k', 'a', 'a', 'b', 'b', 'n', 'n', 'r', 'r',
-            'c', 'c', 'p', 'p', 'p', 'p', 'p'];
-    
+    constructor() {        
         const pieceTypes = {
                 'k': King, 'a': Advisor, 'b': Bishop,
                 'n': Knight, 'r': Rook, 'c': Cannon, 'p': Pawn
-        };        
-        this.pies = pieceChars.map(
+        };
+
+        this.pieceChars = ['K', 'A', 'A', 'B', 'B', 'N', 'N', 'R', 'R',
+            'C', 'C', 'P', 'P', 'P', 'P', 'P',
+            'k', 'a', 'a', 'b', 'b', 'n', 'n', 'r', 'r',
+            'c', 'c', 'p', 'p', 'p', 'p', 'p'];
+        this.pies = this.pieceChars.map(
             c => {return new pieceTypes[c.toLowerCase()](c);});
     }
+
+    toString() {
+        return this.pies.map(p => p.name).toString();
+    }
+
+    getKing(color) {
+        return this.pies[color == RED? 0: 16];
+    }
+
+    getOthSidePiece(piece) {
+        return this.pies[(this.pies.indexOf(piece) + 16) % 32];
+    }
+
+    seatPieces(seatChars) {
+        let result = new Array(seatChars.length);
+        let chars = this.pieceChars(0);
+        for (let {seat, char} of seatChars) {
+            if (char == '_') 
+                continue;
+            for (let i=0; i<chars.length; i++) {
+                if (char == chars[i]) {
+                    result[seat] = this.pies[i];
+                    chars[i] = '';
+                    break;
+                }
+            }
+        }
+        return result;
+    }    
+}
+
+
+//'象棋着法树节点类'
+class Move {          
+    constructor(prev=null) {
+        this.prev = prev;
+        this.fseat = 0;
+        this.tseat = 0;
+        this.remark = '';
+        
+        this.next_ = null;
+        this.other = null;
+        this.stepno = 0; // 着法深度
+        this.othcol = 0; // 变着广度
+        
+        this.maxcol = 0; // 图中列位置（需结合board确定）
+        this.zhstr = prev? '': '1.开始'; // 中文描述（需结合board确定）
+    }
+
+    toString() {
+        let stepno = this.stepno,
+            othcol = this.othcol,
+            maxcol = this.maxcol,
+            fseat = this.fseat,
+            tseat = this.tseat,
+            zhstr = this.zhstr;
+        return `${stepno}_${othcol}(${maxcol}) [${fseat} ${tseat}] ${zhstr}`;
+    }
+
+    ICCSzhstr(fmt) {
+        if (fmt == 'ICCS') {
+            if (this.stepno == 0) {
+                return '';
+            }
+            else {
+                let c0 = colchars[Board.getcol(this.fseat)],
+                    r0 = Board.getrow(this.fseat),
+                    c1 = colchars[Board.getcol(this.tseat)],
+                    r1 = Board.getrow(this.tseat);
+                return `${c0}${r0}${c1}${r1}`;
+            }
+        }
+        else {
+            return this.zhstr;
+        }
+    }
+
+    setSeat_ICCS(ICCSstr){
+        let {fcol, frow, tcol, trow} = ICCSstr;
+        this.fseat = Board.getSeat(int(frow), colchars.index(fcol));
+        this.tseat = Board.getSeat(int(trow), colchars.index(tcol));
+    }
+
+    setNext(next_){
+        next_.stepno = this.stepno + 1;
+        next_.othcol = this.othcol; // 变着层数
+        this.next_ = next_;
+    }
+
+    setOther(other){
+        other.stepno = this.stepno; // 与premove的步数相同
+        other.othcol = this.othcol + 1; // 变着层数
+        this.other = other;
+    }                       
 }
 
 
 pieces = new Pieces();
+move = new Move();
 console.log(pieces);
+console.log(move);
+

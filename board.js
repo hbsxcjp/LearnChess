@@ -173,11 +173,104 @@ class Board {
 
     constructor() {
         this.seats = new Array(90);
+        this.pieces = new Pieces();
+        this.rootmove = null;
+        //this.readfile(filename);
 
     }
+/*
+    __str__(self):
 
-    getSide(color) {
-        return BOTTOM; // 待完善！
+        __getname(piece):
+            rookcannonpawn_name = {'车': '車', '马': '馬', '炮': '砲'}
+            name = piece.name
+            return (rookcannonpawn_name.get(name, name)
+                    if piece.color == BLACK_P else name)
+
+        linestr = [
+            list(line.strip()) for line in blankboard.strip().splitlines()
+        ]
+        for piece in this.getlivepieces():
+            seat = this.getseat(piece)
+            linestr[(9 - Seats.getrow(seat)) *
+                    2][Seats.getcol(seat) * 2] = __getname(piece)
+        return '\n{}\n'.format('\n'.join([''.join(line) for line in linestr]))
+        
+    __infostr(self):
+        return '\n'.join(['[{} "{}"]'.format(key, this.info[key])
+                    for key in sorted(this.info)])   
+       
+    __repr__(self):
+    
+        __setchar(move):
+            firstcol = move.maxcol * 5
+            linestr[move.stepno * 2][firstcol: firstcol + 4] = move.zhstr            
+            if move.remark:              
+                remstrs.append('({:3d},{:3d}): {{{}}}'.format(
+                        move.stepno, move.maxcol, move.remark))                
+            if move.next_:
+                linestr[move.stepno * 2 + 1][firstcol + 1: firstcol + 3] = [' ↓', ' ']
+                __setchar(move.next_)
+            if move.other:
+                linef = firstcol + 4
+                linel = move.other.maxcol * 5
+                linestr[move.stepno * 2][linef: linel] = '…' * (linel - linef)
+                __setchar(move.other)
+            
+        linestr = [['　' for _ in range((this.maxcol + 1) * 5)]
+                    for _ in range((this.maxrow + 1) * 2)]
+        remstrs = []
+        __setchar(this.rootmove)
+            
+        totalstr = '着法深度：{}, 变着广度：{}, 视图宽度：{}\n'.format(
+                    this.maxrow, this.othcol, this.maxcol)
+        walkstr = '\n'.join([''.join(line) for line in linestr])
+        remstr = '\n'.join(remstrs)
+        return '\n'.join([this.__infostr(), str(self), totalstr, walkstr, remstr])
+*/    
+
+/*
+    __clearinfomove(self):
+        this.info = {'Author': '',
+                    'Black': '',
+                    'BlackTeam': '',
+                    'Date': '',
+                    'ECCO': '',
+                    'Event': '',
+                    'FEN': FEN,
+                    'Format': 'zh',
+                    'Game': 'Chinese Chess',
+                    'Opening': '',
+                    'PlayType': '',
+                    'RMKWriter': '',
+                    'Red': '',
+                    'RedTeam': '',
+                    'Result': '',
+                    'Round': '',
+                    'Site': '',
+                    'Title': '',
+                    'Variation': '',
+                    'Version': ''}
+        this.rootmove = Move()
+        this.curmove = this.rootmove
+        this.firstcolor = RED_P 
+        this.movcount = -1 # 消除根节点
+        this.remcount = 0 # 注解数量
+        this.remlenmax = 0 # 注解最大长度
+        this.othcol = 0 # 存储最大变着层数
+        this.maxrow = 0 # 存储最大着法深度
+        this.maxcol = 0 # 存储视图最大列数  
+*/
+    isBottom(color) {
+        return this.bottom == color;
+    }
+
+    isBlank(seat) {
+        return boolean(this.seats[seat]);
+    }
+
+    getSeat(piece) {
+        return this.seats.indexof(piece);
     }
 
     getPiece(seat) {
@@ -188,14 +281,39 @@ class Board {
         return this.seats[seat].color;
     }
 
-    getSeat(piece) {
-        return this.seats.indexof(piece);
+    getSide(color) {
+        return this.bottom == color? BOTTOM: TOP; 
     }
 
-    isBlank(seat) {
-        return boolean(this.seats[seat]);
+    getking(color) {
+        return this.pieces.getKing(color);
     }
 
+    getkingSeat(color) {
+        return this.getSeat(this.getKing(color));
+    }
+
+    getLivePieces(self) {
+        return this.seats.filter(p => boolean(p));
+    }
+
+    getLiveSidePieces(color) {
+        return this.getLivePieces().filter(p => p.color == color);
+    }
+
+    getSidenNameSeats(color, name) {
+        return this.getLiveSidePieces(color).filter(
+            p => p.name == name).map(p => this.getSeat(p));
+    }
+
+    getSideNameColSeats(color, name, col) {
+        return this.getSidenNameSeats(color, name).filter(s => this.getCol(s) == col);
+    }
+
+    getEatedPieces(self) {
+        let livePieces = new Set(this.getLivePieces());
+        return this.pieces.pies().filter(p => !livePieces.has(p));
+    }
 
     //
 
