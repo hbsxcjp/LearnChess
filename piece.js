@@ -54,16 +54,13 @@ class Piece {
     filterObstacleSeats(m_bSeats, board) {
         return m_bBoard.filter(ss => board.isBlank(ss[1])).map(s => s[0]);
     }
-    
-    // 筛除超出可置入位置、本方棋子占用位置
-    filterSeats(moveSeats, board) {
-        let seats = new Set(this.getCanSeats(board));
-        return moveBoard.filter(
-            s => Board.has(s)).filter(
-                s => board.getColor(s) != this._color);
+
+    // 筛除本方棋子占用的目标位置
+    filterColorSeats(moveSeats, board) {
+        return moveBoard.filter(s => board.getColor(s) != this._color);
     }
 
-    // 获取有效活动位置
+    // 获取有效活动的目标位置
     getMoveSeats(board) {
         return [];
     }
@@ -75,9 +72,8 @@ class King extends Piece {
     }
 
     getMoveSeats(board) {
-        return this.filterSeats(
-            Board.getKingMoveSeats(
-                board.getSeat(this)), board);
+        return this.filterColorSeats(
+            Board.getKingMoveSeats(board.getSeat(this)), board);
     }
 }
 
@@ -87,9 +83,8 @@ class Advisor extends Piece {
     }
 
     getMoveSeats(board) {
-        return this.filterSeats(
-            Board.getAdvisorMoveSeats(
-                board.getSeat(this)), board);
+        return this.filterColorSeats(
+            Board.getAdvisorMoveSeats(board.getSeat(this)), board);
     }
 }
 
@@ -99,19 +94,15 @@ class Bishop extends Piece {
     }
 
     getMoveSeats(board) {
-        return this.filterSeats(
-            this.filterObstacleSeats(
-                Board.getBishopMove_CenSeats(
-                    board.getSeat(this)), board), board);
+        return this.filterColorSeats(this.filterObstacleSeats(
+                Board.getBishopMove_CenSeats(board.getSeat(this)), board), board);
     }
 }
 
 class Knight extends Piece {
     getMoveSeats(board) {
-        return this.filterSeats(
-            this.filterObstacleSeats(
-                Board.getKnightMove_LegSeats(
-                    board.getSeat(this)), board), board);
+        return this.filterColorSeats(this.filterObstacleSeats(
+                Board.getKnightMove_LegSeats(board.getSeat(this)), board), board);
     }
 }
 
@@ -122,11 +113,11 @@ class Rook extends Piece {
         for (const seatLine of seatLines) {
             for (const seat of seatLine) {
                 if (board.isBlank(seat)) {
-                    moveBoard.push(seat);
+                    moveSeats.push(seat);
                 }
                 else {
                     if (board.getColor(seat) != this._color) {
-                        moveBoard.push(seat);
+                        moveSeats.push(seat);
                     }
                     break;
                 }
@@ -145,7 +136,7 @@ class Cannon extends Piece {
             for (const seat of seatLine) {
                 if (!skip) {
                     if (board.isBlank(seat)) {
-                        moveBoard.push(seat);
+                        moveSeats.push(seat);
                     }
                     else {
                         skip = true;
@@ -153,7 +144,7 @@ class Cannon extends Piece {
                 }
                 else if (!board.isBlank(seat)) {
                     if (board.getColor(seat) != this._color) {
-                            moveBoard.push(seat);
+                            moveSeats.push(seat);
                     }
                     break;
                 }
@@ -169,23 +160,13 @@ class Pawn extends Piece {
     }
 
     getMoveSeats(board) {
-        let moveSeats = new Array();
-        let seat = board.getSeat(this);
-        let row = Board.getRow(seat);
-        let isBottomSide = board.isBottomSide(this._color);
-        for (let s of this.filterSeats(Board.getPawnMoveSeats(board.getSeat(this)))) {
-            r = Board.getRow(s);
-            if ((isBottomSide && r >= row) || (!isBottomSide && r <= row)) {
-                moveBoard.push(s);
-            }
-        }
-        return moveSeats;
+        return this.filterColorSeats(board.getPawnMoveSeats(board.getSeat(this)));
     }
 }
  
 // 一副棋子类
 class Pieces {
-    constructor() {        
+    constructor() {      
         const pieceTypes = {
                 'k': King, 'a': Advisor, 'b': Bishop,
                 'n': Knight, 'r': Rook, 'c': Cannon, 'p': Pawn
@@ -195,8 +176,7 @@ class Pieces {
             'C', 'C', 'P', 'P', 'P', 'P', 'P',
             'k', 'a', 'a', 'b', 'b', 'n', 'n', 'r', 'r',
             'c', 'c', 'p', 'p', 'p', 'p', 'p'];
-        this.pies = this.pieceChars.map(
-            c => {return new pieceTypes[c.toLowerCase()](c);});
+        this.pies = this.pieceChars.map(c => new pieceTypes[c.toLowerCase()](c));
     }
 
     toString() {
@@ -213,8 +193,9 @@ class Pieces {
 
     seatPieces(seatChars) {
         let result = new Array(seatChars.length);
-        let chars = this.pieceChars(0);
-        for (let {seat, char} of seatChars) {
+        let chars = this.pieceChars.slice(0);
+        for (let seat of seatChars) { // seatChars 是一个对象, seat是key
+            let char = seatChars[seat];
             if (char == '_') 
                 continue;
             for (let i=0; i<chars.length; i++) {
@@ -276,9 +257,9 @@ class Move {
     }
 
     setSeat_ICCS(ICCSstr){
-        let {fcol, frow, tcol, trow} = ICCSstr;
-        this.fseat = Board.getSeat(int(frow), colchars.index(fcol));
-        this.tseat = Board.getSeat(int(trow), colchars.index(tcol));
+        let [fcol, frow, tcol, trow] = [0, 1, 2, 3].map(i => ICCSstr[i]);
+        this.fseat = Board.getSeat(Number(frow), colchars[fcol]);
+        this.tseat = Board.getSeat(Number(trow), colchars[tcol]);
     }
 
     setNext(next_){

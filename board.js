@@ -45,34 +45,85 @@ class Board {
     }
     
     static getKingMoveSeats(seat) {
-        return [seat + 1, seat - 1, seat + NumCols, seat - NumCols];
+        let E = seat + 1,          
+            S = seat - NumCols,
+            W = seat - 1,
+            N = seat + NumCols;
+        let row = this.getRow(seat);
+        let col = this.getCol(seat);
+        let mvseats, seats;
+        if (col == 4) {
+            mvseats = [E, S, W, N];
+        }
+        else if (col == 3) {
+            mvseats = [E, S, N];
+        }
+        else {
+            mvseats = [W, S, N];
+        }
+        if (row == 0 || row ==7) {
+            seats = new Set([E, W, N]);
+        }
+        else if (row == 2 || row == 9) {
+            seats = new Set([S, W, N]);
+        }
+        else {
+            seats = new Set([E, S, W, N]);
+        }
+        return mvseats.filter(s => seats.has(s))
     }
     
     static getAdvisorMoveSeats(seat) {
-        return [seat + NumCols + 1, seat + NumCols - 1,
-                seat - NumCols + 1, seat - NumCols - 1];
+        let EN = seat + NumCols + 1,          
+            ES = seat - NumCols + 1,
+            WS = seat - NumCols - 1,
+            WN = seat + NumCols - 1;
+        let row = this.getRow(seat);
+        let col = this.getCol(seat);
+        if (col == 4) {
+            return [EN, ES, WS, WN];
+        }
+        else if (col == 3) {
+            if (row == 0 || row == 7) {
+                return [EN];
+            }
+            else {
+                return [ES];
+            }
+        }
+        else {
+            if (row == 0 || row == 7) {
+                return [WN];
+            }
+            else {
+                return [WS];
+            } 
+        }
     }
 
     // 获取移动、象心行列值
     static getBishopMove_CenSeats(seat) {
+        let EN = seat + 2 * NumCols + 2,          
+            ES = seat - 2 * NumCols + 2,
+            WS = seat - 2 * NumCols - 2,
+            WN = seat + 2 * NumCols - 2;
         let row = this.getRow(seat);
         let col = this.getCol(seat);
         let mvseats;
         if (col == MaxColNo) {
-            mvseats = [seat + 2 * NumCols - 2, seat - 2 * NumCols - 2];
+            mvseats = [WS, WN];
         }
         else if (col == MinColNo) {
-            mvseats = [seat + 2 * NumCols + 2, seat - 2 * NumCols + 2];
+            mvseats = [ES, EN];
         }
         else if (row == 0 || row == 5) {
-            mvseats = [seat + 2 * NumCols + 2, seat + 2 * NumCols - 2]
+            mvseats = [EN, WN]
         }
         else if (row == 4 || row == 9) {
-            mvseats = [seat - 2 * NumCols + 2, seat - 2 * NumCols - 2]
+            mvseats = [ES, WS]
         }
         else {
-            mvseats = [seat + 2 * NumCols + 2, seat - 2 * NumCols + 2, 
-                    seat + 2 * NumCols - 2, seat - 2 * NumCols - 2];
+            mvseats = [EN, ES, WN, WS];
         }
         return mvseats.map(s => [s, (seat + s) / 2]);
     }
@@ -160,21 +211,42 @@ class Board {
         return seat_lines;
     }
 
-    static getPawnMoveSeats(seat) {
-        mvseats = [seat + 1, seat + NumCols, seat - NumCols, seat - 1];
-        let col = this.getCol(seat); //this指类，而不是实例
-        if (col == MaxColNo) {
-            return mvseats.slice(1);
+    getPawnMoveSeats(seat) {
+        let E = seat + 1, 
+            S = seat - NumCols,
+            W = seat - 1,
+            N = seat + NumCols;
+        let mvseats, seats;
+        switch (this.getCol(seat)) {
+            case MaxColNo:
+                mvseats = [S, W, N];
+                break;
+            case MinColNo:
+                mvseats = [E, S, N];
+                break;
+            default:
+                mvseats = [E, S, W, N];
         }
-        else if (col == MinColNo) {
-            return mvseats.slice(0, 3);
+        let row = this.getRow(seat);
+        if (row == 9 || row == 0) {
+            seats = new Set([E, W]);        
         }
+        else {
+            if (this.getSide(this.getColor(seat)) == BOTTOM) {
+                seats = new Set([E, W, N]);
+            }
+            else {
+                seats = new Set([E, W, S]);
+            }
+        }
+        return mvseats.filter(s => seats.has(s));
     }
 
     constructor() {
         this.seats = new Array(90);
         this.pieces = new Pieces();
         this.rootmove = null;
+        this.bottomSide = null;
         //this.readfile(filename);
 
     }
@@ -262,11 +334,11 @@ class Board {
         this.maxcol = 0 # 存储视图最大列数  
 */
     isBottom(color) {
-        return this.bottom == color;
+        return this.bottomSide == color;
     }
 
     isBlank(seat) {
-        return boolean(this.seats[seat]);
+        return Boolean(this.seats[seat]);
     }
 
     getSeat(piece) {
@@ -282,19 +354,19 @@ class Board {
     }
 
     getSide(color) {
-        return this.bottom == color? BOTTOM: TOP; 
+        return this.bottomSide == color? BOTTOM: TOP; 
     }
 
-    getking(color) {
+    getKing(color) {
         return this.pieces.getKing(color);
     }
 
-    getkingSeat(color) {
+    getKingSeat(color) {
         return this.getSeat(this.getKing(color));
     }
 
     getLivePieces(self) {
-        return this.seats.filter(p => boolean(p));
+        return this.seats.filter(p => Boolean(p));
     }
 
     getLiveSidePieces(color) {
@@ -312,7 +384,7 @@ class Board {
 
     getEatedPieces(self) {
         let livePieces = new Set(this.getLivePieces());
-        return this.pieces.pies().filter(p => !livePieces.has(p));
+        return this.pieces.pies.filter(p => !livePieces.has(p));
     }
 
     //
