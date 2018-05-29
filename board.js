@@ -250,29 +250,33 @@ class Board {
         //this.readfile(filename);
 
     }
+
+    toString() {
+        function __getname(piece) {
+            let rcpName = {'车': '車', '马': '馬', '炮': '砲'};
+            let name = piece.name;
+            if (piece.color == BLACK && naem in rcpName) {
+                return rcpName[name];
+            }
+            else {
+                return name;
+            }
+        }
+
+        let linestr = blankBoard.trim().split('\n').map(line => [...line.trim()]);
+        for (let piece of this.getLivePieces()) {
+            let seat = this.getSeat(piece)
+            linestr[(9-this.getRow(seat))*2][Seats.getCol(seat) * 2] = __getname(piece);
+        }
+        return `\n${linestr.map(line => line.join('')).join('\n')}\n`;
+    }
 /*
-    __str__(self):
-
-        __getname(piece):
-            rookcannonpawn_name = {'车': '車', '马': '馬', '炮': '砲'}
-            name = piece.name
-            return (rookcannonpawn_name.get(name, name)
-                    if piece.color == BLACK_P else name)
-
-        linestr = [
-            list(line.strip()) for line in blankboard.strip().splitlines()
-        ]
-        for piece in this.getlivepieces():
-            seat = this.getseat(piece)
-            linestr[(9 - Seats.getrow(seat)) *
-                    2][Seats.getcol(seat) * 2] = __getname(piece)
-        return '\n{}\n'.format('\n'.join([''.join(line) for line in linestr]))
-        
-    __infostr(self):
+    __infostr() {
         return '\n'.join(['[{} "{}"]'.format(key, this.info[key])
                     for key in sorted(this.info)])   
-       
-    __repr__(self):
+    }
+
+    toLacelString() {
     
         __setchar(move):
             firstcol = move.maxcol * 5
@@ -299,10 +303,10 @@ class Board {
         walkstr = '\n'.join([''.join(line) for line in linestr])
         remstr = '\n'.join(remstrs)
         return '\n'.join([this.__infostr(), str(self), totalstr, walkstr, remstr])
-*/    
-
-/*
-    __clearinfomove(self):
+    
+        }
+*/
+    __clearinfomove() {
         this.info = {'Author': '',
                     'Black': '',
                     'BlackTeam': '',
@@ -322,17 +326,18 @@ class Board {
                     'Site': '',
                     'Title': '',
                     'Variation': '',
-                    'Version': ''}
-        this.rootmove = Move()
-        this.curmove = this.rootmove
-        this.firstcolor = RED_P 
-        this.movcount = -1 # 消除根节点
-        this.remcount = 0 # 注解数量
-        this.remlenmax = 0 # 注解最大长度
-        this.othcol = 0 # 存储最大变着层数
-        this.maxrow = 0 # 存储最大着法深度
-        this.maxcol = 0 # 存储视图最大列数  
-*/
+                    'Version': ''};
+        this.rootmove = new Move();
+        this.curmove = this.rootmove;
+        this.firstcolor = RED;
+        this.movcount = -1; //消除根节点
+        this.remcount = 0; //注解数量
+        this.remlenmax = 0; //注解最大长度
+        this.othcol = 0; //存储最大变着层数
+        this.maxrow = 0; //存储最大着法深度
+        this.maxcol = 0; //存储视图最大列数  
+    }
+
     isBottom(color) {
         return this.bottomSide == color;
     }

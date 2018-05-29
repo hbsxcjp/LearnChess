@@ -194,8 +194,7 @@ class Pieces {
     seatPieces(seatChars) {
         let result = new Array(seatChars.length);
         let chars = this.pieceChars.slice(0);
-        for (let seat of seatChars) { // seatChars 是一个对象, seat是key
-            let char = seatChars[seat];
+        for (let [seat, char] of seatChars) { // seatChars 由多个[seat, char]组成
             if (char == '_') 
                 continue;
             for (let i=0; i<chars.length; i++) {
@@ -257,7 +256,7 @@ class Move {
     }
 
     setSeat_ICCS(ICCSstr){
-        let [fcol, frow, tcol, trow] = [0, 1, 2, 3].map(i => ICCSstr[i]);
+        let [fcol, frow, tcol, trow] = [...ICCSstr]; // ...展开运算符
         this.fseat = Board.getSeat(Number(frow), colchars[fcol]);
         this.tseat = Board.getSeat(Number(trow), colchars[tcol]);
     }
