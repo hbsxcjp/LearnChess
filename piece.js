@@ -186,17 +186,17 @@ class Pawn extends Piece {
 // 一副棋子类
 class Pieces {
     constructor() {
-        const PieceChars = ['K', 'A', 'A', 'B', 'B', 'N', 'N', 'R', 'R',
+        const pieceChars = ['K', 'A', 'A', 'B', 'B', 'N', 'N', 'R', 'R',
             'C', 'C', 'P', 'P', 'P', 'P', 'P',
             'k', 'a', 'a', 'b', 'b', 'n', 'n', 'r', 'r',
             'c', 'c', 'p', 'p', 'p', 'p', 'p'];
     
-        const PieceTypes = {
+        const pieceTypes = {
                 'k': King, 'a': Advisor, 'b': Bishop,
                 'n': Knight, 'r': Rook, 'c': Cannon, 'p': Pawn
         };        
-        this.pies = PieceChars.map(
-            c => {return new PieceTypes[c.toLowerCase()](c);});
+        this.pies = pieceChars.map(
+            c => {return new pieceTypes[c.toLowerCase()](c);});
     }
 }
 
