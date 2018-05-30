@@ -1,6 +1,6 @@
 // 中国象棋棋子类型 by-cjp
 
-export {BLACK, RED, Pieces};
+export {BLACK, RED, CharNames, Pieces};
     
 const { BLACK, RED, CharNames, TypeChars } = constValue();
 function constValue(){
