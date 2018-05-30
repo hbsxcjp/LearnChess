@@ -508,15 +508,18 @@ class Board {
 
     __sortpawnseats(isbottomside, pawnseats){   //     '多兵排序'
         let result = [];
-        let pawnseatdict = {Seats.getcol(seat): [] for seat in pawnseats};
+        let pawnseatdict = new Map(pawnseats.map(s => [this.getCol(s), []]));
         for (let seat of pawnseats){
-            pawnseatdict[Seats.getcol(seat)].append(seat)
+            pawnseatdict[Seats.getCol(seat)].push(seat);
         }  // 列内排序
-        for col, seats in sorted(pawnseatdict.items()):
-            if len(seats) > 1:
-                result.extend(seats)  # 按列排序
-        return result[::-1] if isbottomside else result
+        let pawnseatarray = [...pawnseatdict].filter(([c, s]) => s.length > 1);
+        pawnseatarray.sort(sortNumber);
+        for (let {col, seats} of pawnseatarray.entries()){
+                result.concat(seats);
+        }  // 按列排序
+        return isbottomside? result.reverse(): result;
     }
+    
 /*
     def setmvseat(self, move):
         '根据中文纵线着法描述取得源、目标位置: (fseat, tseat)'
@@ -1486,6 +1489,11 @@ function range(from, end){
     }
     return array;
 }
-        
+
+// 数字数组排序函数
+function sortNumber(a, b){
+    return a[0] - b[0];
+}
+
 
 console.log(board);
