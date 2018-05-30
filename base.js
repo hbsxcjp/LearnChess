@@ -1,5 +1,7 @@
 //中国象棋基础信息
     
+export {blankBoard, View, multRepl, xmlIndent};
+
 const blankBoard = `
 ┏━┯━┯━┯━┯━┯━┯━┯━┓
 ┃　│　│　│╲│╱│　│　│　┃
@@ -44,15 +46,18 @@ function multRepl(text, xdict) {
 
 function xmlIndent(elem, islast=False, level=0) {
     //'Get pretty look 取得漂亮的外观'
-    __isblank(text) {
+    function __isblank(text) {
         //return not text or not text.expandtabs(4).strip()
     }
-    __addblank(text) {
+
+    function __addblank(text) {
         //return '{}{}'.format(text.expandtabs(4).strip(), tabstr)
     }
-    __cuttab(tail, islast) {
+
+    function __cuttab(tail, islast) {
         //return tail[:-1] if islast else tail
     }
+
     /*tabstr = '\n' + level * '\t'
     if len(elem):
         elem.text = '{}\t'.format(

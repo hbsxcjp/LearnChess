@@ -1,50 +1,116 @@
 // 中国象棋棋盘布局类型 by-cjp
 
-//import {Piece, Pieces} from './piece.js';
+import {blankBoard, View, multRepl, xmlIndent} from './base.js';
+import {BLACK, RED, Pieces} from './piece.js';
 
-const { BOTTOM, TOP,
+const { BOTTOM, TOP, 
         NumRows, NumCols, MaxColNo, MinColNo,
         NumToChinese, ChineseToNum, FEN } = constValue();
 
+//'象棋着法树节点类'
+class Move {          
+    constructor(prev=null){
+        this.prev = prev;
+        this.fseat = 0;
+        this.tseat = 0;
+        this.remark = '';
+        
+        this.next_ = null;
+        this.other = null;
+        this.stepno = 0; // 着法深度
+        this.othcol = 0; // 变着广度
+        
+        this.maxcol = 0; // 图中列位置（需结合board确定）
+        this.zhstr = prev? '': '1.开始'; // 中文描述（需结合board确定）
+    }
+
+    toString(){
+        let stepno = this.stepno,
+            othcol = this.othcol,
+            maxcol = this.maxcol,
+            fseat = this.fseat,
+            tseat = this.tseat,
+            zhstr = this.zhstr;
+        return `${stepno}_${othcol}(${maxcol}) [${fseat} ${tseat}] ${zhstr}`;
+    }
+
+    ICCSzhstr(fmt){
+        if (fmt == 'ICCS'){
+            if (this.stepno == 0){
+                return '';
+            }
+            else {
+                let c0 = ColChars[Board.getCol(this.fseat)],
+                    r0 = Board.getRow(this.fseat),
+                    c1 = ColChars[Board.getCol(this.tseat)],
+                    r1 = Board.getRow(this.tseat);
+                return `${c0}${r0}${c1}${r1}`;
+            }
+        }
+        else {
+            return this.zhstr;
+        }
+    }
+
+    setSeat_ICCS(ICCSstr){
+        let [fcol, frow, tcol, trow] = [...ICCSstr]; // ...展开运算符
+        this.fseat = Board.getSeat(Number(frow), ColChars[fcol]);
+        this.tseat = Board.getSeat(Number(trow), ColChars[tcol]);
+    }
+
+    setNext(next_){
+        next_.stepno = this.stepno + 1;
+        next_.othcol = this.othcol; // 变着层数
+        this.next_ = next_;
+    }
+
+    setOther(other){
+        other.stepno = this.stepno; // 与premove的步数相同
+        other.othcol = this.othcol + 1; // 变着层数
+        this.other = other;
+    }                       
+}
+
+        
 class Board {
-    static getRow(seat) {
+    static getRow(seat){
         return Math.floor(seat / NumCols);
     }
     
-    static getCol(seat) {
+    static getCol(seat){
         return seat % NumCols;
     }
     
-    static getSeat(row, col) {
+    static getSeat(row, col){
         return row * NumCols + col;
     }
 
-    static rotateSeat(seat) {
+    static rotateSeat(seat){
         return 89 - seat;
     }
     
-    static symmetrySeat(seat) {
+    static symmetrySeat(seat){
         return (this.getRow(seat) + 1) * NumCols - seat % NumCols - 1;
     }
     
-    static isSameCol(seat, othseat) {
+    static isSameCol(seat, othseat){
         return this.getCol(seat) == this.getCol(othseat);
     }
     
-    static getSameColSeats(seat, othseat) {
+    static getSameColSeats(seat, othseat){
         let seats = new Array();
         let step = seat < othseat ? NumCols : -NumCols;
 
-        function compare (i, j) {
+        function compare (i, j){
             return step > 0 ? i < j : i > j;
         }; // 定义比较函数
-        for (let i = seat + step; compare(i, othseat); i += step) {
+        for (let i = seat + step; compare(i, othseat); i += step){
             seats.push(i);
         }
         return seats;
     }
     
-    static getKingMoveSeats(seat) {
+    static getKingMoveSeats(seat){
         let E = seat + 1,          
             S = seat - NumCols,
             W = seat - 1,
@@ -52,39 +118,39 @@ class Board {
         let row = this.getRow(seat);
         let col = this.getCol(seat);
         let mvseats, seats;
-        if (col == 4) {
+        if (col == 4){
             mvseats = [E, S, W, N];
         }
-        else if (col == 3) {
+        else if (col == 3){
             mvseats = [E, S, N];
         }
         else {
             mvseats = [W, S, N];
         }
-        if (row == 0 || row ==7) {
+        if (row == 0 || row ==7){
             seats = new Set([E, W, N]);
         }
-        else if (row == 2 || row == 9) {
+        else if (row == 2 || row == 9){
             seats = new Set([S, W, N]);
         }
         else {
             seats = new Set([E, S, W, N]);
         }
-        return mvseats.filter(s => seats.has(s))
+        return mvseats.filter(s => seats.has(s));
     }
     
-    static getAdvisorMoveSeats(seat) {
+    static getAdvisorMoveSeats(seat){
         let EN = seat + NumCols + 1,          
             ES = seat - NumCols + 1,
             WS = seat - NumCols - 1,
             WN = seat + NumCols - 1;
         let row = this.getRow(seat);
         let col = this.getCol(seat);
-        if (col == 4) {
+        if (col == 4){
             return [EN, ES, WS, WN];
         }
-        else if (col == 3) {
-            if (row == 0 || row == 7) {
+        else if (col == 3){
+            if (row == 0 || row == 7){
                 return [EN];
             }
             else {
@@ -92,7 +158,7 @@ class Board {
             }
         }
         else {
-            if (row == 0 || row == 7) {
+            if (row == 0 || row == 7){
                 return [WN];
             }
             else {
@@ -102,7 +168,7 @@ class Board {
     }
 
     // 获取移动、象心行列值
-    static getBishopMove_CenSeats(seat) {
+    static getBishopMove_CenSeats(seat){
         let EN = seat + 2 * NumCols + 2,          
             ES = seat - 2 * NumCols + 2,
             WS = seat - 2 * NumCols - 2,
@@ -110,17 +176,17 @@ class Board {
         let row = this.getRow(seat);
         let col = this.getCol(seat);
         let mvseats;
-        if (col == MaxColNo) {
+        if (col == MaxColNo){
             mvseats = [WS, WN];
         }
-        else if (col == MinColNo) {
+        else if (col == MinColNo){
             mvseats = [ES, EN];
         }
-        else if (row == 0 || row == 5) {
-            mvseats = [EN, WN]
+        else if (row == 0 || row == 5){
+            mvseats = [EN, WN];
         }
-        else if (row == 4 || row == 9) {
-            mvseats = [ES, WS]
+        else if (row == 4 || row == 9){
+            mvseats = [ES, WS];
         }
         else {
             mvseats = [EN, ES, WN, WS];
@@ -129,16 +195,16 @@ class Board {
     }
 
     // 获取移动、马腿行列值
-    static getKnightMove_LegSeats(seat) {
-        function _leg(first, to) {
+    static getKnightMove_LegSeats(seat){
+        function _leg(first, to){
             let x = to - first;
-            if (x > NumCols + 2) {
+            if (x > NumCols + 2){
                 return first + NumCols;
             }
-            else if (x < -NumCols - 2) {
+            else if (x < -NumCols - 2){
                 return first - NumCols;
             }
-            else if (x == NumCols + 2 || x == -NumCols + 2) {
+            else if (x == NumCols + 2 || x == -NumCols + 2){
                 return first + 1;
             }
             else {
@@ -155,7 +221,7 @@ class Board {
             NW = seat + 2 * NumCols - 1, 
             NE = seat + 2 * NumCols + 1;
         let mvseats, seats;
-        switch(this.getCol(seat)) {
+        switch(this.getCol(seat)){
             case MaxColNo: 
                 mvseats = [SW, WS, WN, NW];
                 break;
@@ -171,7 +237,7 @@ class Board {
             default:
                 mvseats = [EN, ES, SE, SW, WS, WN, NW, NE];
         }
-        switch (this.getRow(seat)) {
+        switch (this.getRow(seat)){
             case 9:
                 seats = new Set([ES, SE, SW, WS]);
                 break;
@@ -191,33 +257,33 @@ class Board {
     }
 
     // 车炮可走的四个方向位置
-    static getRookCannonMoveSeat_Lines(seat) {
+    static getRookCannonMoveSeat_Lines(seat){
         let seat_lines = [[], [], [], []];
         let row = this.getRow(seat); //this指类，而不是实例
         let leftlimit = row * NumCols - 1;
         let rightlimit = (row + 1) * NumCols;
-        for (let i = seat - 1; i > leftlimit; i--) {
+        for (let i = seat - 1; i > leftlimit; i--){
             seat_lines[0].push(i);
         }
-        for (let i = seat + 1; i < rightlimit; i++) {
+        for (let i = seat + 1; i < rightlimit; i++){
             seat_lines[1].push(i);
         }
-        for (let i = seat - NumCols; i > -1; i -= NumCols) {
+        for (let i = seat - NumCols; i > -1; i -= NumCols){
             seat_lines[2].push(i);
         }
-        for (let i = seat + NumCols; i < 90; i += NumCols) {
+        for (let i = seat + NumCols; i < 90; i += NumCols){
             seat_lines[3].push(i);
         }
         return seat_lines;
     }
 
-    getPawnMoveSeats(seat) {
+    getPawnMoveSeats(seat){
         let E = seat + 1, 
             S = seat - NumCols,
             W = seat - 1,
             N = seat + NumCols;
         let mvseats, seats;
-        switch (this.getCol(seat)) {
+        switch (this.getCol(seat)){
             case MaxColNo:
                 mvseats = [S, W, N];
                 break;
@@ -228,11 +294,11 @@ class Board {
                 mvseats = [E, S, W, N];
         }
         let row = this.getRow(seat);
-        if (row == 9 || row == 0) {
+        if (row == 9 || row == 0){
             seats = new Set([E, W]);        
         }
         else {
-            if (this.getSide(this.getColor(seat)) == BOTTOM) {
+            if (this.getSide(this.getColor(seat)) == BOTTOM){
                 seats = new Set([E, W, N]);
             }
             else {
@@ -242,7 +308,7 @@ class Board {
         return mvseats.filter(s => seats.has(s));
     }
 
-    constructor() {
+    constructor(){
         this.seats = new Array(90);
         this.pieces = new Pieces();
         this.rootmove = null;
@@ -251,11 +317,11 @@ class Board {
 
     }
 
-    toString() {
-        function __getname(piece) {
+    toString(){
+        function __getname(piece){
             let rcpName = {'车': '車', '马': '馬', '炮': '砲'};
             let name = piece.name;
-            if (piece.color == BLACK && naem in rcpName) {
+            if (piece.color == BLACK && name in rcpName){
                 return rcpName[name];
             }
             else {
@@ -264,49 +330,57 @@ class Board {
         }
 
         let linestr = blankBoard.trim().split('\n').map(line => [...line.trim()]);
-        for (let piece of this.getLivePieces()) {
-            let seat = this.getSeat(piece)
+        for (let piece of this.getLivePieces()){
+            let seat = this.getSeat(piece);
             linestr[(9-this.getRow(seat))*2][Seats.getCol(seat) * 2] = __getname(piece);
         }
         return `\n${linestr.map(line => line.join('')).join('\n')}\n`;
     }
-/*
-    __infostr() {
-        return '\n'.join(['[{} "{}"]'.format(key, this.info[key])
-                    for key in sorted(this.info)])   
+
+    __infostr(){
+        return this.info.map(x => `[${x} "${this.info[x]}"]`).join('\n');
     }
 
-    toLacelString() {
+    toLacelString(){
     
-        __setchar(move):
-            firstcol = move.maxcol * 5
-            linestr[move.stepno * 2][firstcol: firstcol + 4] = move.zhstr            
-            if move.remark:              
-                remstrs.append('({:3d},{:3d}): {{{}}}'.format(
-                        move.stepno, move.maxcol, move.remark))                
-            if move.next_:
-                linestr[move.stepno * 2 + 1][firstcol + 1: firstcol + 3] = [' ↓', ' ']
-                __setchar(move.next_)
-            if move.other:
-                linef = firstcol + 4
-                linel = move.other.maxcol * 5
-                linestr[move.stepno * 2][linef: linel] = '…' * (linel - linef)
-                __setchar(move.other)
-            
-        linestr = [['　' for _ in range((this.maxcol + 1) * 5)]
-                    for _ in range((this.maxrow + 1) * 2)]
-        remstrs = []
-        __setchar(this.rootmove)
-            
-        totalstr = '着法深度：{}, 变着广度：{}, 视图宽度：{}\n'.format(
-                    this.maxrow, this.othcol, this.maxcol)
-        walkstr = '\n'.join([''.join(line) for line in linestr])
-        remstr = '\n'.join(remstrs)
-        return '\n'.join([this.__infostr(), str(self), totalstr, walkstr, remstr])
-    
+        function __setchar(move){
+            let firstcol = move.maxcol * 5;
+            for (let i=0; i<4; i++){
+                linestr[move.stepno * 2][firstcol+i] = move.zhstr[i];
+            }         
+            if (move.remark){
+                remstrs.push(`(${move.stepno},${move.maxcol}): {${move.remark}}`);
+            }             
+            if (move.next_){
+                linestr[move.stepno * 2 + 1][firstcol + 1] = ' ↓';
+                linestr[move.stepno * 2 + 1][firstcol + 2] = ' ';
+                __setchar(move.next_);
+            }
+            if (move.other){
+                let linef = firstcol + 4;
+                let linel = move.other.maxcol * 5;
+                for (let i=linef; i<linel; i++){
+                    linestr[move.stepno * 2][i] = '…';
+                }
+                __setchar(move.other);
+            }
         }
-*/
-    __clearinfomove() {
+            
+        let line = [...'　'.repeat((this.maxcol + 1) * 5)];
+        let linestr; 
+        for (let i of range(0, (this.maxrow + 1) * 2)){
+            linestr.push(line);
+        }        
+        let remstrs = [];
+        __setchar(this.rootmove);
+            
+        let totalstr = `着法深度：${this.maxrow}, 变着广度：${this.othcol}, 视图宽度：${this.maxcol}\n`;
+        let walkstr = [...linestr].join('\n');
+        let remstr = remstrs.join('\n');
+        return [this.__infostr(), str(self), totalstr, walkstr, remstr].join('\n');
+    }
+
+    __clearinfomove(){
         this.info = {'Author': '',
                     'Black': '',
                     'BlackTeam': '',
@@ -338,56 +412,56 @@ class Board {
         this.maxcol = 0; //存储视图最大列数  
     }
 
-    isBottom(color) {
+    isBottom(color){
         return this.bottomSide == color;
     }
 
-    isBlank(seat) {
+    isBlank(seat){
         return Boolean(this.seats[seat]);
     }
 
-    getSeat(piece) {
+    getSeat(piece){
         return this.seats.indexof(piece);
     }
 
-    getPiece(seat) {
+    getPiece(seat){
         return this.seats[seat];
     }
     
-    getColor(seat) {
+    getColor(seat){
         return this.seats[seat].color;
     }
 
-    getSide(color) {
+    getSide(color){
         return this.bottomSide == color? BOTTOM: TOP; 
     }
 
-    getKing(color) {
+    getKing(color){
         return this.pieces.getKing(color);
     }
 
-    getKingSeat(color) {
+    getKingSeat(color){
         return this.getSeat(this.getKing(color));
     }
 
-    getLivePieces(self) {
+    getLivePieces(self){
         return this.seats.filter(p => Boolean(p));
     }
 
-    getLiveSidePieces(color) {
+    getLiveSidePieces(color){
         return this.getLivePieces().filter(p => p.color == color);
     }
 
-    getSidenNameSeats(color, name) {
+    getSidenNameSeats(color, name){
         return this.getLiveSidePieces(color).filter(
             p => p.name == name).map(p => this.getSeat(p));
     }
 
-    getSideNameColSeats(color, name, col) {
+    getSideNameColSeats(color, name, col){
         return this.getSidenNameSeats(color, name).filter(s => this.getCol(s) == col);
     }
 
-    getEatedPieces(self) {
+    getEatedPieces(self){
         let livePieces = new Set(this.getLivePieces());
         return this.pieces.pies.filter(p => !livePieces.has(p));
     }
@@ -397,7 +471,7 @@ class Board {
 }
 
 // 单例对象
-board = new Board();
+const board = new Board();
 
 // 设置静态属性（目前，不能在类定义内直接设置）
 Object.defineProperties(board, {
@@ -449,13 +523,14 @@ Object.defineProperties(board, {
     }
 });
 
-function constValue() {
+function constValue(){
     const BOTTOM = 'bottom';
     const TOP = 'top';
     const NumCols = 9;
     const NumRows = 10;
     const MinColNo = 0;
     const MaxColNo = 8;
+    const ColChars = 'abcdefghi';
     // 初始布局
     const NumToChinese = {
         RED_P: {
@@ -482,9 +557,9 @@ function constValue() {
 }
 
 // 取得数字序列数组
-function range(from, end) {
+function range(from, end){
     let array = new Array();
-    for (let i = from; i < end; i++) {
+    for (let i = from; i < end; i++){
         array.push(i);
     }
     return array;
