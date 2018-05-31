@@ -713,12 +713,12 @@ class Board {
         inc = abs(inc);
         for (let i=0; i<inc; i++){
             if (go){
-                if (this.curmove.next_ === null) return ;
+                if (!this.curmove.next_) return ;
                 this.movego(this.curmove.next_);
                 moved = true;
             }
             else{
-                if (this.curmove.prev === null) return ;
+                if (!this.curmove.prev) return ;
                 this.moveback();
                 moved = true;
             }
