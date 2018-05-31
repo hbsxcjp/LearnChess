@@ -842,47 +842,51 @@ class Board {
 
     changeside(changetype='exchange'){
         
-        function __changeseat(seltransfun):            
-            '根据transfun改置每个move的fseat,tseat'
+        let __changeseat = (seltransfun) => {            
+            //'根据transfun改置每个move的fseat,tseat'
             
-            __seat(move):
-                move.fseat = transfun(move.fseat)
-                move.tseat = transfun(move.tseat)
-                if move.next_:
-                    __seat(move.next_)
-                if move.other:
-                    __seat(move.other)
-        
-            if this.rootmove.next_:
-                __seat(this.rootmove.next_) # 驱动调用递归函数
-                    
-        curmove = this.curmove
-        this.movefirst()
-        if changetype == 'exchange':
-            this.firstcolor = not this.firstcolor
-            seatpieces = {this.getseat(piece): this.pieces.getothsidepiece(piece)
-                    for piece in this.getlivepieces()}
-        else:
-            transfun = (this.rotateseat if changetype == 'rotate'
-                    else this.symmetryseat)
-            __changeseat(transfun)
-            seatpieces = {transfun(this.getseat(piece)): piece
-                    for piece in this.getlivepieces()}
-        this.__setseatpieces(seatpieces)
-        if changetype != 'rotate':
-            this.__setmvinfo()
-        if curmove is not this.rootmove:
-            this.movethis(curmove)
-        else:
-            this.notifyviews()
-        }
+            function __seat(move){
+                move.fseat = transfun(move.fseat);
+                move.tseat = transfun(move.tseat);
+                if (move.next_)
+                    __seat(move.next_);
+                if (move.other)
+                    __seat(move.other);
+            }
 
-    __setcounts(move){
-        this.movcount += 1
-        if move.remark:
-            this.remcount += 1
-            this.remlenmax = max(this.remlenmax, len(move.remark))
+            if (this.rootmove.next_)
+                __seat(this.rootmove.next_);
+            } //# 驱动调用递归函数
+                    
+        let curmove = this.curmove;
+        this.movefirst();
+        let seatpieces;
+        if (changetype == 'exchange'){
+            this.firstcolor = this.firstcolor == RED? RED : BLACK;
+            seatpieces = new Map(this.getlivepieces().map(
+                    p => [this.getseat(piece), this.pieces.getothsidepiece(piece)]));
+        } else {
+            let transfun = changetype == 'rotate'? this.rotateseat : this.symmetryseat;
+            __changeseat(transfun);
+            seatpieces = new Map(this.getlivepieces().map(p => [transfun(this.getseat(piece)), piece]));
+        }
+        this.__setseatpieces(seatpieces);
+        if (changetype != 'rotate')
+            this.__setmvinfo();
+        if (curmove !== this.rootmove){
+            this.movethis(curmove);
+        }
+        else{
+            this.notifyviews();
+        }
     }
+
+    __setcounts(move) {
+        this.movcount += 1;
+        if (move.remark)
+            this.remcount += 1;
+            this.remlenmax = ((a, b) => a > b ? a : b)(this.remlenmax, move.remark.length);
+    } 
 
             /*
     __readxqf(filename):    
@@ -1068,35 +1072,45 @@ class Board {
             KeyXYf, KeyXYt, KeyRMKSize, F32Keys = __readinfo(bytestr)
             __readmove(this.rootmove)
         this.info['Version_xqf'] = str(this.info['Version_xqf'])
+*/
 
-    __readbin(filename):
+
+    __readbin(filename){
     
-        __readmove(move):
-            hasothernextrem, fi, ti = movestruct1.unpack(fileobj.read(3))
-            move.fseat, move.tseat = fi, ti
-            if hasothernextrem & 0x20:
-                rlength = movestruct2.unpack(fileobj.read(2))[0]
-                move.remark = fileobj.read(rlength).decode()
-            this.__setcounts(move) # 设置内部计数值
-            if hasothernextrem & 0x80:
-                move.setother(Move(move.prev))
-                __readmove(move.other)
-            if hasothernextrem & 0x40:
-                move.setnext(Move(move))
-                __readmove(move.next_)
-                
-        movestruct1 = struct.Struct('3B')
-        movestruct2 = struct.Struct('H')
-        with open(filename, 'rb') as fileobj:
-            this.__init__()
-            count = struct.Struct('B').unpack(fileobj.read(1))[0]
-            infoks = struct.Struct('{}B'.format(count)).unpack(fileobj.read(count))
-            infovstruct = struct.Struct(('{}s' * count).format(*infoks))
-            infovs = infovstruct.unpack(fileobj.read(sum(infoks)))
-            for n, key in enumerate(sorted(this.info)):
+        function __readmove(move){
+            hasothernextrem, fi, ti = movestruct1.unpack(fileobj.read(3));
+            move.fseat, move.tseat = fi, ti;
+            if (hasothernextrem & 0x20){
+                rlength = movestruct2.unpack(fileobj.read(2))[0];
+                move.remark = fileobj.read(rlength).decode();
+            }
+            this.__setcounts(move);// # 设置内部计数值
+            if (hasothernextrem & 0x80){
+                move.setother(Move(move.prev));
+                __readmove(move.other);
+            }
+            if (hasothernextrem & 0x40){
+                move.setnext(Move(move));
+                __readmove(move.next_);
+            }
+        }
+
+        movestruct1 = struct.Struct('3B');
+        movestruct2 = struct.Struct('H');
+        with open(filename, 'rb') as fileobj{
+            this.__init__();
+            count = struct.Struct('B').unpack(fileobj.read(1))[0];
+            infoks = struct.Struct('{}B'.format(count)).unpack(fileobj.read(count));
+            infovstruct = struct.Struct(('{}s' * count).format(*infoks));
+            infovs = infovstruct.unpack(fileobj.read(sum(infoks)));
+            for n, key in enumerate(sorted(this.info)){
                 this.info[key] = infovs[n].decode()
-            __readmove(this.rootmove)
-            
+            }
+            __readmove(this.rootmove);
+        }
+    }
+
+/*            
     __readxml(filename):
             
         __readelem(elem, i, move):
