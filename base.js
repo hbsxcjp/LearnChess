@@ -36,13 +36,13 @@ class View {
     }
 }
          
-function multRepl(text, xdict) {
+function multRepl(text, replStrs) {
     // 一次替换多个子字符串（字典定义）（方法来源于PythonCook）
-    //rx = re.compile('|'.join(map(re.escape, xdict)));  // 模式
-    //def one_xlat(match):
-    //    return xdict[match.group(0)]  # 替换值
-    //return rx.sub(one_xlat, text)  # 执行替换
+    for (let oldNew of replStrs) {
+        text = text.replace(RegExp(oldNew[0], 'g'), oldNew[1]);
     }
+    return text;
+}
 
 function xmlIndent(elem, islast=False, level=0) {
     //'Get pretty look 取得漂亮的外观'
@@ -67,4 +67,4 @@ function xmlIndent(elem, islast=False, level=0) {
     elem.tail = __cuttab(
         tabstr if __isblank(elem.tail) else __addblank(elem.tail), islast)
         */
-    }        
+}        

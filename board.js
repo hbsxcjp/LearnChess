@@ -2,135 +2,71 @@
 
 import {blankBoard, View, multRepl, xmlIndent} from './base.js';
 import {BLACK, RED, CharNames, Pieces} from './piece.js';
+import {partition, Move, Moves} from './move.js';
 
-const { BOTTOM, TOP, 
-        NumRows, NumCols, MaxColNo, MinColNo,
+const { BOTTOM, TOP,
+        NumCols, NumRows, maxColNo, MinColNo,
         NumToChinese, ChineseToNum, FEN } = constValue();
 
-//'象棋着法树节点类'
-class Move {          
-    constructor(prev=null){
-        this.prev = prev;
-        this.fseat = 0;
-        this.tseat = 0;
-        this.remark = '';
-        
-        this.next_ = null;
-        this.other = null;
-        this.stepno = 0; // 着法深度
-        this.othcol = 0; // 变着广度
-        
-        this.maxcol = 0; // 图中列位置（需结合board确定）
-        this.zhstr = prev? '': '1.开始'; // 中文描述（需结合board确定）
-    }
-
-    toString(){
-        let stepno = this.stepno,
-            othcol = this.othcol,
-            maxcol = this.maxcol,
-            fseat = this.fseat,
-            tseat = this.tseat,
-            zhstr = this.zhstr;
-        return `${stepno}_${othcol}(${maxcol}) [${fseat} ${tseat}] ${zhstr}`;
-    }
-
-    ICCSzhstr(fmt){
-        if (fmt == 'ICCS'){
-            if (this.stepno == 0){
-                return '';
-            }
-            else {
-                let c0 = ColChars[Board.getCol(this.fseat)],
-                    r0 = Board.getRow(this.fseat),
-                    c1 = ColChars[Board.getCol(this.tseat)],
-                    r1 = Board.getRow(this.tseat);
-                return `${c0}${r0}${c1}${r1}`;
-            }
-        }
-        else {
-            return this.zhstr;
-        }
-    }
-
-    setSeat_ICCS(ICCSstr){
-        let [fcol, frow, tcol, trow] = [...ICCSstr]; // ...展开运算符
-        this.fseat = Board.getSeat(Number(frow), ColChars[fcol]);
-        this.tseat = Board.getSeat(Number(trow), ColChars[tcol]);
-    }
-
-    setNext(next_){
-        next_.stepno = this.stepno + 1;
-        next_.othcol = this.othcol; // 变着层数
-        this.next_ = next_;
-    }
-
-    setOther(other){
-        other.stepno = this.stepno; // 与premove的步数相同
-        other.othcol = this.othcol + 1; // 变着层数
-        this.other = other;
-    }                       
-}
-
-        
 class Board {
-    static getRow(seat){
+    static getRow(seat) {
         return Math.floor(seat / NumCols);
     }
     
-    static getCol(seat){
+    static getCol(seat) {
         return seat % NumCols;
     }
     
-    static getSeat(row, col){
+    static getSeat(row, col) {
         return row * NumCols + col;
     }
 
-    static rotateSeat(seat){
+    static rotateSeat(seat) {
         return 89 - seat;
     }
     
-    static symmetrySeat(seat){
-        return (this.getRow(seat) + 1) * NumCols - seat % NumCols - 1;
+    static symmetrySeat(seat) {
+        return (Board.getRow(seat) + 1) * NumCols - seat % NumCols - 1;
     }
     
-    static isSameCol(seat, othseat){
-        return this.getCol(seat) == this.getCol(othseat);
+    static isSameCol(seat, othseat) {
+        return Board.getCol(seat) == Board.getCol(othseat);
     }
     
-    static getSameColSeats(seat, othseat){
+    static getSameColSeats(seat, othseat) {
         let seats = new Array();
         let step = seat < othseat ? NumCols : -NumCols;
 
-        function compare (i, j){
+        function compare (i, j) {
             return step > 0 ? i < j : i > j;
         }; // 定义比较函数
-        for (let i = seat + step; compare(i, othseat); i += step){
+        for (let i = seat + step; compare(i, othseat); i += step) {
             seats.push(i);
         }
         return seats;
     }
     
-    static getKingMoveSeats(seat){
+    static getKingMoveSeats(seat) {
         let E = seat + 1,          
             S = seat - NumCols,
             W = seat - 1,
             N = seat + NumCols;
-        let row = this.getRow(seat);
-        let col = this.getCol(seat);
+        let row = Board.getRow(seat);
+        let col = Board.getCol(seat);
         let mvseats, seats;
-        if (col == 4){
+        if (col == 4) {
             mvseats = [E, S, W, N];
         }
-        else if (col == 3){
+        else if (col == 3) {
             mvseats = [E, S, N];
         }
         else {
             mvseats = [W, S, N];
         }
-        if (row == 0 || row ==7){
+        if (row == 0 || row ==7) {
             seats = new Set([E, W, N]);
         }
-        else if (row == 2 || row == 9){
+        else if (row == 2 || row == 9) {
             seats = new Set([S, W, N]);
         }
         else {
@@ -139,18 +75,18 @@ class Board {
         return mvseats.filter(s => seats.has(s));
     }
     
-    static getAdvisorMoveSeats(seat){
+    static getAdvisorMoveSeats(seat) {
         let EN = seat + NumCols + 1,          
             ES = seat - NumCols + 1,
             WS = seat - NumCols - 1,
             WN = seat + NumCols - 1;
-        let row = this.getRow(seat);
-        let col = this.getCol(seat);
-        if (col == 4){
+        let row = Board.getRow(seat);
+        let col = Board.getCol(seat);
+        if (col == 4) {
             return [EN, ES, WS, WN];
         }
-        else if (col == 3){
-            if (row == 0 || row == 7){
+        else if (col == 3) {
+            if (row == 0 || row == 7) {
                 return [EN];
             }
             else {
@@ -158,7 +94,7 @@ class Board {
             }
         }
         else {
-            if (row == 0 || row == 7){
+            if (row == 0 || row == 7) {
                 return [WN];
             }
             else {
@@ -168,24 +104,24 @@ class Board {
     }
 
     // 获取移动、象心行列值
-    static getBishopMove_CenSeats(seat){
+    static getBishopMove_CenSeats(seat) {
         let EN = seat + 2 * NumCols + 2,          
             ES = seat - 2 * NumCols + 2,
             WS = seat - 2 * NumCols - 2,
             WN = seat + 2 * NumCols - 2;
-        let row = this.getRow(seat);
-        let col = this.getCol(seat);
+        let row = Board.getRow(seat);
+        let col = Board.getCol(seat);
         let mvseats;
-        if (col == MaxColNo){
+        if (col == maxColNo) {
             mvseats = [WS, WN];
         }
-        else if (col == MinColNo){
+        else if (col == MinColNo) {
             mvseats = [ES, EN];
         }
-        else if (row == 0 || row == 5){
+        else if (row == 0 || row == 5) {
             mvseats = [EN, WN];
         }
-        else if (row == 4 || row == 9){
+        else if (row == 4 || row == 9) {
             mvseats = [ES, WS];
         }
         else {
@@ -195,16 +131,16 @@ class Board {
     }
 
     // 获取移动、马腿行列值
-    static getKnightMove_LegSeats(seat){
-        function _leg(first, to){
+    static getKnightMove_LegSeats(seat) {
+        function _leg(first, to) {
             let x = to - first;
-            if (x > NumCols + 2){
+            if (x > NumCols + 2) {
                 return first + NumCols;
             }
-            else if (x < -NumCols - 2){
+            else if (x < -NumCols - 2) {
                 return first - NumCols;
             }
-            else if (x == NumCols + 2 || x == -NumCols + 2){
+            else if (x == NumCols + 2 || x == -NumCols + 2) {
                 return first + 1;
             }
             else {
@@ -221,11 +157,11 @@ class Board {
             NW = seat + 2 * NumCols - 1, 
             NE = seat + 2 * NumCols + 1;
         let mvseats, seats;
-        switch(this.getCol(seat)){
-            case MaxColNo: 
+        switch(Board.getCol(seat)) {
+            case maxColNo: 
                 mvseats = [SW, WS, WN, NW];
                 break;
-            case MaxColNo - 1:
+            case maxColNo - 1:
                 mvseats = [SE, SW, WS, WN, NW, NE];
                 break;
             case MinColNo:
@@ -237,7 +173,7 @@ class Board {
             default:
                 mvseats = [EN, ES, SE, SW, WS, WN, NW, NE];
         }
-        switch (this.getRow(seat)){
+        switch (Board.getRow(seat)) {
             case 9:
                 seats = new Set([ES, SE, SW, WS]);
                 break;
@@ -257,34 +193,34 @@ class Board {
     }
 
     // 车炮可走的四个方向位置
-    static getRookCannonMoveSeat_Lines(seat){
+    static getRookCannonMoveSeat_Lines(seat) {
         let seat_lines = [[], [], [], []];
-        let row = this.getRow(seat); //this指类，而不是实例
+        let row = Board.getRow(seat); //this指类，而不是实例
         let leftlimit = row * NumCols - 1;
         let rightlimit = (row + 1) * NumCols;
-        for (let i = seat - 1; i > leftlimit; i--){
+        for (let i = seat - 1; i > leftlimit; i--) {
             seat_lines[0].push(i);
         }
-        for (let i = seat + 1; i < rightlimit; i++){
+        for (let i = seat + 1; i < rightlimit; i++) {
             seat_lines[1].push(i);
         }
-        for (let i = seat - NumCols; i > -1; i -= NumCols){
+        for (let i = seat - NumCols; i > -1; i -= NumCols) {
             seat_lines[2].push(i);
         }
-        for (let i = seat + NumCols; i < 90; i += NumCols){
+        for (let i = seat + NumCols; i < 90; i += NumCols) {
             seat_lines[3].push(i);
         }
         return seat_lines;
     }
 
-    getPawnMoveSeats(seat){
+    getPawnMoveSeats(seat) {
         let E = seat + 1, 
             S = seat - NumCols,
             W = seat - 1,
             N = seat + NumCols;
         let mvseats, seats;
-        switch (this.getCol(seat)){
-            case MaxColNo:
+        switch (Board.getCol(seat)) {
+            case maxColNo:
                 mvseats = [S, W, N];
                 break;
             case MinColNo:
@@ -293,12 +229,12 @@ class Board {
             default:
                 mvseats = [E, S, W, N];
         }
-        let row = this.getRow(seat);
-        if (row == 9 || row == 0){
+        let row = Board.getRow(seat);
+        if (row == 9 || row == 0) {
             seats = new Set([E, W]);        
         }
         else {
-            if (this.getSide(this.getColor(seat)) == BOTTOM){
+            if (this.getSide(this.getColor(seat)) == BOTTOM) {
                 seats = new Set([E, W, N]);
             }
             else {
@@ -308,79 +244,19 @@ class Board {
         return mvseats.filter(s => seats.has(s));
     }
 
-    constructor(){
+    addListener(listener) {
+        let fileInput = document.getElementById("fileInput");
+        fileInput.addEventListener("change", listener, false);
+        //let body = document.getElementById("body");    
+        //body.addEventListener("load", listener, false);
+    }
+       
+    constructor() {
         this.seats = new Array(90);
         this.pieces = new Pieces();
-        this.rootMove = null;
-        this.bottomSide = null;
-        //this.readfile(filename);
+        this.moves = new Moves();
+        this.rootMove = this.moves.rootMove; // 本类对象方便引用
 
-    }
-
-    toString(){
-        function __getname(piece){
-            let rcpName = {'车': '車', '马': '馬', '炮': '砲'};
-            let name = piece.name;
-            if (piece.color == BLACK && name in rcpName){
-                return rcpName[name];
-            }
-            else {
-                return name;
-            }
-        }
-
-        let linestr = blankBoard.trim().split('\n').map(line => [...line.trim()]);
-        for (let piece of this.getLivePieces()){
-            let seat = this.getSeat(piece);
-            linestr[(9-this.getRow(seat))*2][this.getCol(seat) * 2] = __getname(piece);
-        }
-        return `\n${linestr.map(line => line.join('')).join('\n')}\n`;
-    }
-
-    infoString(){
-        return this.info.map(x => `[${x} "${this.info[x]}"]`).join('\n');
-    }
-
-    toLacelString(){
-    
-        function __setchar(move){
-            let firstcol = move.maxcol * 5;
-            for (let i=0; i<4; i++){
-                linestr[move.stepno * 2][firstcol+i] = move.zhstr[i];
-            }         
-            if (move.remark){
-                remstrs.push(`(${move.stepno},${move.maxcol}): {${move.remark}}`);
-            }             
-            if (move.next_){
-                linestr[move.stepno * 2 + 1][firstcol + 1] = ' ↓';
-                linestr[move.stepno * 2 + 1][firstcol + 2] = ' ';
-                __setchar(move.next_);
-            }
-            if (move.other){
-                let linef = firstcol + 4;
-                let linel = move.other.maxcol * 5;
-                for (let i=linef; i<linel; i++){
-                    linestr[move.stepno * 2][i] = '…';
-                }
-                __setchar(move.other);
-            }
-        }
-            
-        let line = [...'　'.repeat((this.maxcol + 1) * 5)];
-        let linestr; 
-        for (let i of range(0, (this.maxrow + 1) * 2)){
-            linestr.push(line);
-        }        
-        let remstrs = [];
-        __setchar(this.rootMove);
-            
-        let totalstr = `着法深度：${this.maxrow}, 变着广度：${this.othcol}, 视图宽度：${this.maxcol}\n`;
-        let walkstr = [...linestr].join('\n');
-        let remstr = remstrs.join('\n');
-        return [this.infoString(), str(this), totalstr, walkstr, remstr].join('\n');
-    }
-
-    clearInfoMove(){
         this.info = {'Author': '',
                     'Black': '',
                     'BlackTeam': '',
@@ -401,81 +277,138 @@ class Board {
                     'Title': '',
                     'Variation': '',
                     'Version': ''};
-        this.rootMove = new Move();
-        this.curMove = this.rootMove;
-        this.firstColor = RED;
-        this.movcount = -1; //消除根节点
-        this.remcount = 0; //注解数量
-        this.remlenmax = 0; //注解最大长度
-        this.othcol = 0; //存储最大变着层数
-        this.maxrow = 0; //存储最大着法深度
-        this.maxcol = 0; //存储视图最大列数  
+        this.bottomSide = null;        
+        this.addListener(this.readFile());
+
     }
-   
-    isBottomSide(color){
+
+    boardString() {
+        function __getname(piece) {
+            let rcpName = {'车': '車', '马': '馬', '炮': '砲'};
+            let name = piece.name;
+            return (piece.color == BLACK && name in rcpName) ?  rcpName[name] : name;
+        }
+
+        let lineStr = blankBoard.trim().split('\n').map(line => [...line.trim()]);
+        for (let piece of this.getLivePieces()) {
+            let seat = this.getSeat(piece);
+            lineStr[(9-Board.getRow(seat))*2][Board.getCol(seat) * 2] = __getname(piece);
+        }
+        return `\n${lineStr.map(line => line.join('')).join('\n')}\n`;
+    }
+
+    infoString() {
+        return Object.keys(this.info).map(x => `[${x} "${this.info[x]}"]`).join('\n');
+    }
+
+    toString() {
+        return [this.boardString(), this.infoString(), this.moves.toString()].join('\n');
+    }
+    
+    toLacelString() {
+    
+        function __setchar(move) {
+            let firstcol = move.maxCol * 5;
+            for (let i=0; i<4; i++) {
+                //console.log(lineStr[move.stepNo * 2] || `${move.stepNo * 2}`);
+                lineStr[move.stepNo * 2][firstcol+i] = move.zhstr[i];
+            }         
+            if (move.remark) {
+                remstrs.push(`(${move.stepNo},${move.maxCol}): {${move.remark}}`);
+            }             
+            if (move.next_) {
+                lineStr[move.stepNo * 2 + 1][firstcol + 1] = ' ↓';
+                lineStr[move.stepNo * 2 + 1][firstcol + 2] = ' ';
+                __setchar(move.next_);
+            }
+            if (move.other) {
+                let linef = firstcol + 4;
+                let linel = move.other.maxCol * 5;
+                for (let i=linef; i<linel; i++) {
+                    lineStr[move.stepNo * 2][i] = '…';
+                }
+                __setchar(move.other);
+            }
+        }
+            
+        let line = [...'　'.repeat((this.maxCol + 1) * 5)];
+        let lineStr = []; 
+        for (let i of range(0, (this.maxRow + 1) * 2)) {
+            lineStr.push(line);
+        }        
+        let remstrs = [];
+        __setchar(this.rootMove);
+            
+        let totalstr = `着法深度：${this.maxRow}, 变着广度：${this.othCol}, 视图宽度：${this.maxCol}\n`;
+        let walkstr = [...lineStr].join('\n');
+        let remstr = remstrs.join('\n');
+        return [this.infoString(), str(this), totalstr, walkstr, remstr].join('\n');
+    }
+
+    isBottomSide(color) {
         return this.bottomSide == color;
     }
 
-    isBlank(seat){
+    isBlank(seat) {
         return Boolean(this.seats[seat]);
     }
 
-    getSeat(piece){
+    getSeat(piece) {
         return this.seats.indexOf(piece);
     }
 
-    getPiece(seat){
+    getPiece(seat) {
         return this.seats[seat];
     }
     
-    getColor(seat){
+    getColor(seat) {
         return this.seats[seat].color;
     }
 
-    getSide(color){
+    getSide(color) {
         return this.bottomSide == color? BOTTOM: TOP; 
     }
 
-    getKing(color){
+    getKing(color) {
         return this.pieces.getKing(color);
     }
 
-    getKingSeat(color){
+    getKingSeat(color) {
         return this.getSeat(this.getKing(color));
     }
 
-    getLivePieces(){
+    getLivePieces() {
         return this.seats.filter(p => Boolean(p));
     }
 
-    getLiveSidePieces(color){
+    getLiveSidePieces(color) {
         return this.getLivePieces().filter(p => p.color == color);
     }
 
-    getSidenNameSeats(color, name){
+    getSidenNameSeats(color, name) {
         return this.getLiveSidePieces(color).filter(
             p => p.name == name).map(p => this.getSeat(p));
     }
 
-    getSideNameColSeats(color, name, col){
-        return this.getSidenNameSeats(color, name).filter(s => this.getCol(s) == col);
+    getSideNameColSeats(color, name, col) {
+        return this.getSidenNameSeats(color, name).filter(s => Board.getCol(s) == col);
     }
 
-    getEatedPieces(){
+    getEatedPieces() {
         let livePieces = new Set(this.getLivePieces());
         return this.pieces.pies.filter(p => !livePieces.has(p));
     }
 
-    isKilled(color){
+    isKilled(color) {
         let otherColor = color == BLACK? RED :BLACK;
         let kingSeat = this.getKingSeat(color);
         let otherSeat = this.getKingSeat(otherColor);
-        if (this.isSameCol(kingSeat, otherSeat)){  // 将帅是否对面
-            if (every(getSameColSeats(kingSeat, otherSeat).filter(s => this.isBlank(seat)))){
+        if (Board.isSameCol(kingSeat, otherSeat)) {  // 将帅是否对面
+            if (every(getSameColSeats(kingSeat, otherSeat).filter(s => this.isBlank(seat)))) {
                 return true;
             }
-        for (let piece of this.getLiveSidePieces(otherColor)){
-            if (piece.isStronge && (kingSeat in piece.getMoveSeats(this))){
+        for (let piece of this.getLiveSidePieces(otherColor)) {
+            if (piece.isStronge && (kingSeat in piece.getMoveSeats(this))) {
                 return true;
             }
         }
@@ -483,55 +416,72 @@ class Board {
         }
     }
 
-    canMoveSeats(fseat){    //    '获取棋子可走的位置, 不能被将军'
-        let result = [];
-        let piece = this.getpiece(fseat);
-        let color = piece.color;
-        for (let tseat of piece.getMoveSeats(this)){
-            let topiece = this.__go(fseat, tseat);
-            if (!this.isKilled(color)){
-                result.push(tseat);
-            }
-            this.__back(fseat, tseat, topiece);
-        }
-        return result
-    }
-        
-    isDied(color){
-        for (let piece of this.getLiveSidePieces(color)){
-            if (this.canMoveSeats(this.getSeat(piece))){
+    isDied(color) {
+        for (let piece of this.getLiveSidePieces(color)) {
+            if (this.canMoveSeats(this.getSeat(piece))) {
                 return False;
             }
         }
         return True
     }
 
-    sortPawnSeats(isBottomSide, pawnSeats){   //     '多兵排序'
+    canMoveSeats(fseat) {    //    '获取棋子可走的位置, 不能被将军'
         let result = [];
-        let pawnSeatMap = new Map(pawnSeats.map(s => [this.getCol(s), []]));
-        for (let seat of pawnSeats){
-            pawnSeatMap[this.getCol(seat)].push(seat);
+        let piece = this.getPiece(fseat);
+        let color = piece.color;
+        let moveData;
+        for (let tseat of piece.getMoveSeats(this)) {
+            moveData = {fseat: fseat, tseat: tseat};
+            moveData.eatPiece = this.__go(moveData);
+            if (!this.isKilled(color)) {
+                result.push(tseat);
+            }
+            this.__back(moveData);
+        }
+        return result
+    }        
+
+    __go(move) {
+        let fseat = move.fseat, 
+            tseat = move.tseat;
+        let eatPiece = this.seats[tseat];
+        this.seats[tseat] = this.seats[fseat];
+        this.seats[fseat] = null;
+        return eatPiece;
+    }
+
+    __back(move) {
+        let fseat = move.fseat, 
+            tseat = move.tseat;
+        this.seats[fseat] = this.seats[tseat];
+        this.seats[tseat] = move.eatPiece;
+    }
+
+    sortPawnSeats(isBottomSide, pawnSeats) {   //     '多兵排序'
+        let result = [];
+        let pawnSeatMap = new Map(pawnSeats.map(s => [seatCharsgetCol(s), []]));
+        for (let seat of pawnSeats) {
+            pawnSeatMap[seatCharsgetCol(seat)].push(seat);
         }  // 列内排序
         let pawnSeatArray = [...pawnSeatMap].filter(([c, s]) => s.length > 1);
         pawnSeatArray = pawnSeatArray.sort((a, b) => a[0] - b[0]);
-        for (let {col, seats} of pawnSeatArray.entries()){
+        for (let {col, seats} of pawnSeatArray.entries()) {
                 result.concat(seats);
         }  // 按列排序
         return isBottomSide? result.reverse(): result;
-    }
-    
+    }    
 
-    setMoveSeat(move){
+    setMoveSeat(move) {
         //根据中文纵线着法描述取得源、目标位置: (fseat, tseat)
-        function __zhcol_col(zhcol){
+        function __zhcol_col(zhcol) {
             return (isBottomSide? NumCols - ChineseToNum[zhcol]: ChineseToNum[zhcol] - 1);
         }
 
-        let color = this.curColor, 
+        let color = this.currentColor, 
             zhstr = move.zhstr;
         let isBottomSide = this.isBottomSide(color);
         let name = zhstr[0];
-        if (name in CharNames.values()){
+        if (name in CharNames.values()) {
             let seats = this.getSideNameColSeats(color, name, __zhcol_col(zhstr[1]));
             // assert bool(seats), ('没有找到棋子 => %s color:%s name: %s\n%s' % (zhstr, color, name, this))
 
@@ -546,13 +496,13 @@ class Board {
             let seats = this.getSideNameSeats(color, name);
             // assert len(seats) >= 2, 'color: %s name: %s 棋子列表少于2个! \n%s' % (     color, name, this)
             
-            if (PawnNames.indexOf(name) >= 0){
+            if (PawnNames.indexOf(name) >= 0) {
                 let seats = this.sortPawnSeats(isBottomSide, seats);  //# 获取多兵的列
-                if (seats.length > 3){
+                if (seats.length > 3) {
                     index -= 1;
                 }
             }  //# 修正index
-            else if (isBottomSide){
+            else if (isBottomSide) {
                 seats = seats.reverse();
             }
             move.fseat = seats[index];
@@ -561,19 +511,19 @@ class Board {
         let movdir = ChineseToNum[zhstr[2]] * (isBottomSide? 1 : -1);
         //# '根据中文行走方向取得棋子的内部数据方向（进：1，退：-1，平：0）'
         let tocol = __zhcol_col(zhstr[3]);
-        if (LineMovePieceNames.indexOf(name) >= 0){
+        if (LineMovePieceNames.indexOf(name) >= 0) {
             //#'获取直线走子toseat'
-            let row = this.getRow(fseat);
-            move.tseat = (movdir == 0)? this.getSeat(row, tocol) : (
-                            this.getSeat(row + movdir * ChineseToNum[zhstr[3]],
-                                this.getCol(fseat)));
+            let row = Board.getRow(fseat);
+            move.tseat = (movdir == 0)? Board.getSeat(row, tocol) : (
+                            Board.getSeat(row + movdir * ChineseToNum[zhstr[3]],
+                                Board.getCol(fseat)));
         }        
         else {
             //#'获取斜线走子：仕、相、马toseat'
-            let step = tocol - this.getCol(fseat);//  # 相距1或2列            
+            let step = tocol - Board.getCol(fseat);//  # 相距1或2列            
             let inc = (AdvisorBishopNames.indexOf(name) >= 0)? Math.abs(step) : (
                         Math.abs(step) == 1? 2 : 1);
-            move.tseat = this.getSeat(this.getRow(fseat) + movdir * inc, tocol);
+            move.tseat = Board.getSeat(Board.getRow(fseat) + movdir * inc, tocol);
         }
         //move.fseat = fseat
         /*'''
@@ -582,32 +532,32 @@ class Board {
                 zhstr, move.zhstr))
         '''  
         */      
-        }
+    }
 
-    setZhstr(move){
+    setZhstr(move) {
         '根据源、目标位置: (fseat, tseat)取得中文纵线着法描述'
-        function __col_chcol(color, col){
+        function __col_chcol(color, col) {
             return NumToChinese[color][isBottomSide? NumCols - col : col + 1];
         }
 
         let fseat = move.fseat, 
             tseat = move.tseat;
-        let frompiece = this.getpiece(fseat);
+        let frompiece = this.getPiece(fseat);
         let color = frompiece.color, 
             name = frompiece.name;
         let isBottomSide = this.isBottomSide(color);
-        let fromrow = this.getRow(fseat), 
-            fromcol = this.getCol(fseat);
+        let fromrow = Board.getRow(fseat), 
+            fromcol = Board.getCol(fseat);
         let seats = this.getSideNameColSeats(color, name, fromcol);
         let length = seats.length;
         let firstStr, lastStr;
-        if (length > 1 && StrongePieceNames.indexOf(name) >= 0){
-            if (PawnNames.indexOf(name) >= 0){
+        if (length > 1 && StrongePieceNames.indexOf(name) >= 0) {
+            if (PawnNames.indexOf(name) >= 0) {
                 seats = this.sortPawnSeats(isBottomSide,
                     this.getSideNameSeats(color, name));
                 length = seats.length;
             }
-            else if (isBottomSide){  //# '车', '马', '炮'
+            else if (isBottomSide) {  //# '车', '马', '炮'
                 seats = seats.reverse();
             }
             let indexstr = length in [2, 3]? {2: '前后', 3: '前中后'}[length] : '一二三四五';
@@ -618,8 +568,8 @@ class Board {
             firstStr = name + __col_chcol(color, fromcol);
         }
 
-        let torow = this.getRow(tseat), 
-            tocol = this.getCol(tseat);
+        let torow = Board.getRow(tseat), 
+            tocol = Board.getCol(tseat);
         let chcol = __col_chcol(color, tocol);
         let tochar = torow == fromrow? '平' : (isBottomSide == (torow > fromrow)? '进' : '退')
         let tochcol = ((torow == fromrow || LineMovePieceNames.indexOf(name) < 0)? chcol :
@@ -631,194 +581,68 @@ class Board {
         assert (fseat, tseat) == (move.fseat, move.tseat), ('棋谱着法: %s   生成着法: %s 不等！' % ((fseat, tseat), (move.fseat, move.tseat)))
         '''*/
     }
-            
-    get curColor(){
-        return this.curMove.stepno % 2 == 0? this.firstColor: (
-            c => c == RED? BLACK : RED)(this.firstColor);
-    }
 
-    get isStart(){
-        return this.curMove === this.rootMove;
-    }     
-
-    get isLast(){
-        return this.curMove.next_ === null;
-    }
-
-    getprevmoves(move=null){
-        if (!move) move = this.curMove;
-        let result = [move];
-        while (move.prev){
-            result.push(move.prev)
-            move = move.prev;
-        }
-        return result.reverse();
-    }
-
-    __go(fseat, tseat){
-        let eatpiece = this.seats[tseat];
-        this.seats[tseat] = this.seats[fseat];
-        this.seats[fseat] = null;
-        return eatpiece;
-    }
-
-    __back(fseat, tseat, backpiece){
-        this.seats[fseat] = this.seats[tseat];
-        this.seats[tseat] = backpiece;
-    }
-                
-    moveGo(move){
-        move.eatpiece = this.__go(move.fseat, move.tseat);
-        this.curMove = move;
-    }
-            
-    moveBack(){
-        this.__back(this.curMove.fseat, this.curMove.tseat, 
-                this.curMove.eatpiece);
-        this.curMove = this.curMove.prev;
-    }
-
-    moveOther(){
-        //'移动到当前节点的另一变着'
-        if (this.curMove.other === null) return ;       
-        let tomove = this.curMove.other;   
-        this.moveBack();
-        this.moveGo(tomove);
-        this.notifyViews();
-    }
-
-    moveFirst(updateview=false){
-        let moved = false;
-        while (this.curMove !== this.rootMove){
-            this.moveBack();
-            moved = true;
-        }
-        if (moved && updateview)
-            this.notifyViews();
-    }
-    
-    moveLast(){
-        let moved = false;
-        while (this.curMove.next_ !== null){
-            this.moveGo(this.curMove.next_);
-            moved = true;
-        }
-        if (moved)
-            this.notifyViews();
-    }
-
-    moveStep(inc=1){
-        let moved = false;
-        let go = inc < 0? true : false;
-        inc = abs(inc);
-        for (let i=0; i<inc; i++){
-            if (go){
-                if (!this.curMove.next_) return ;
-                this.moveGo(this.curMove.next_);
-                moved = true;
-            }
-            else{
-                if (!this.curMove.prev) return ;
-                this.moveBack();
-                moved = true;
-            }
-        }
-        if (moved)
-            this.notifyViews();
-    }
-
-    moveThis(move){
-        if (move === this.curMove) return ;
-        this.moveFirst();
-        this.getprevmoves(move).map(mv => this.moveGo(mv));
-        this.notifyViews();
-    }
-
-    addMove(fseat, tseat, remark='', isOther=false){
-        let move = new Move(isOther? this.curMove.prev: this.curMove);
-        move.fseat = fseat;
-        move.tseat = tseat;
-        move.remark = remark;
-        this.setZhstr(move);
-        if (isOther){
-            this.curMove.setOther(move);
-            this.moveOther();
-        }
-        else{
-            this.curMove.setnext(move);
-            this.moveStep();
-        }
-        this.__setmvinfo();
-    }
-
-    cutNext(){
-        this.curMove.next_ = null;
-    }
-
-    cutOther(){
-        if (this.curMove.other) this.curMove.other = this.curMove.other.other;
-    }
-
-    __fen(pieceChars=null){
-        function __linetonums(){
+    __fen(pieceChars=null) {
+        function __linetonums() {
             //'下划线字符串对应数字字符元组 列表'
             let result = [];
-            for (let i=9; i>0; i--){
+            for (let i=9; i>0; i--) {
                 result.push(['_'.repeat(i), String(i)]);
             }
             return result;
         }
 
-        if (!pieceChars)
+        if (!pieceChars) {
             pieceChars = this.seats.map(p => piece.char);
+        }
         let charls = [];
-        for (let rowno=0; rowno<NumRows; rowno++){
+        for (let rowno=0; rowno<NumRows; rowno++) {
             charls.push(pieceChars.slice(rowno * NumCols, (rowno + 1) * NumCols));
         }
         let _fen = charls.reverse().map(chars => chars.join('')).join('/');
-        for (let [_str, nstr] of __linetonums()){
+        for (let [_str, nstr] of __linetonums()) {
             _fen = _fen.replace(_str, nstr);
         }
         return _fen;
     }
 
-    mergeFen(_fen, whoplay){
+    mergeFen(_fen, whoplay) {
         return `${_fen} ${whoplay? 'b' : 'r'} - - 0 0`;
     }
 
-    getFen(){    
-        let assignmove = this.curMove;
+    getFen() {    
+        let assignmove = this.currentMove;
         this.moveFirst();
-        let fen = this.mergeFen(this.__fen(), this.curColor == BLACK);
+        let fen = this.mergeFen(this.__fen(), this.currentColor == BLACK);
         this.moveThis(assignmove);
         //assert this.info['FEN'] == fen, '\n原始:{}\n生成:{}'.format(this.info['FEN'], fen)
         return fen;
     }
 
-    setSeatPieces(seatPieces){
+    setSeatPieces(seatPieces) {
         this.seats = new Array(90);
-        for (let [seat, piece] of seatPieces.entries()){
+        for (let [seat, piece] of seatPieces.entries()) {
             this.seats[seat] = piece;
         }
-        this.bottomside = this.getRow(this.getKingSeat(RED)) < 3? RED : BLACK;
+        this.bottomside = Board.getRow(this.getKingSeat(RED)) < 3? RED : BLACK;
     }     
 
-    setFen(fen=''){    
-        function __numtolines(){
+    setFen(fen='') {    
+        function __numtolines() {
             //'数字字符: 下划线字符串'
-            numtolines = {};
+            let numtolines = [];
             for (let i=0; i<10; i++)
-                numtolines[String(i)] = '_'.repeat(i);
+                numtolines.push([String(i), '_'.repeat(i)]);
             return numtolines;
         }
 
-        function __isvalid(charls){
+        function __isvalid(charls) {
             '判断棋子列表是否有效'
             if (charls.length != 90)
                 return 'len(charls) != 90 棋局的位置个数不等于90，有误！';
-            let chars = charls.filter(c => c);
+            let chars = charls.filter(c => c != '_');
             if (chars.length > 32)
-                return 'len(chars) > 32 全部的棋子个数大于32个，有误！';        
+                return 'chars.length > 32 全部的棋子个数大于32个，有误！';        
             return false;
         }
 
@@ -830,22 +654,27 @@ class Board {
         let afens = fen.split(' ');
         let _fen = afens[0];
         let fenstr = _fen.split('/').reverse().join('');
-        let charls = multRepl(fenstr, __numtolines()).split();
+        let charls = multRepl(fenstr, __numtolines()).split('');
         let info = __isvalid(charls);
-        if (info) console(info);
-        let seatchars = charls.map(([n, char]) => [this.seat(n), char]);
-        this.setSeatPieces(this.pieces.seatPieces(seatchars));
+        if (info)
+            console.log(info);
+        let seatChars = []; //= charls.entries().map(c => );
+        for (let i = 0; i < charls.length; i++) {
+            seatChars.push([i, charls[i]]);
+        }
+        //console.log(seatChars);
+        this.setSeatPieces(this.pieces.seatPieces(seatChars));
         this.firstColor = afens[1] == 'b'? BLACK : RED;
-        this.curMove = this.rootMove;
+        this.currentMove = this.rootMove;
         this.notifyViews();
     }
 
-    changeSide(changeType='exchange'){
+    changeSide(changeType='exchange') {
         
         let __changeseat = (seltransfun) => {            
             //'根据transfun改置每个move的fseat,tseat'
             
-            function __seat(move){
+            function __seat(move) {
                 move.fseat = transfun(move.fseat);
                 move.tseat = transfun(move.tseat);
                 if (move.next_)
@@ -858,10 +687,10 @@ class Board {
                 __seat(this.rootMove.next_);
             } //# 驱动调用递归函数
                     
-        let curMove = this.curMove;
-        this.moveFirst();
+        let currentMove = this.currentMove;
+        this.moves.moveFirst();
         let seatPieces;
-        if (changeType == 'exchange'){
+        if (changeType == 'exchange') {
             this.firstColor = this.firstColor == BLACK? RED : BLACK;
             seatPieces = new Map(this.getLivePieces().map(
                     p => [this.getSeat(piece), this.pieces.getothsidepiece(piece)]));
@@ -872,74 +701,76 @@ class Board {
         }
         this.setSeatPieces(seatPieces);
         if (changeType != 'rotate')
-            this.__setmvinfo();
-        if (curMove !== this.rootMove){
-            this.moveThis(curMove);
-        }
-        else{
-            this.notifyViews();
+            this.moves.setMoveInfo(this);
+        if (currentMove !== this.rootMove) {
+            this.moves.moveTo(currentMove);
         }
     }
 
     setCounts(move) {
-        this.movcount += 1;
-        if (move.remark)
-            this.remcount += 1;
-            this.remlenmax = ((a, b) => a > b ? a : b)(this.remlenmax, move.remark.length);
+        this.movCount += 1;
+        if (move.remark) {
+            this.remCount += 1;
+            this.remLenMax = Math.max(this.remLenMax, move.remark.length);
+        }
     }
 
-    __readbin(file){
-    
-        function __readmove(move){
-            hasothernextrem, fi, ti = movestruct1.unpack(fileobj.read(3));
-            move.fseat, move.tseat = fi, ti;
-            if (hasothernextrem & 0x20){
-                rlength = movestruct2.unpack(fileobj.read(2))[0];
-                move.remark = fileobj.read(rlength).decode();
-            }
-            this.setCounts(move);// # 设置内部计数值
-            if (hasothernextrem & 0x80){
-                move.setOther(Move(move.prev));
-                __readmove(move.other);
-            }
-            if (hasothernextrem & 0x40){
-                move.setnext(Move(move));
-                __readmove(move.next_);
-            }
-        }
-
+    __readbin(file) {
         movestruct1 = struct.Struct('3B');
         movestruct2 = struct.Struct('H');
         
     }
 
-    __readpgn(file) {
-        ;
+    __readpgn(pgnText) {
+        let [infoStr, moveStr] = partition(pgnText, /\n1./gm);
+        if (infoStr) {
+            for (let [key, value] of infoStr.match(/\[(\S+) "(.*)"\]/gm)) {
+                this.info[key] = value;
+            } //# 读取info内容（在已设置原始key上可能会有增加）
+        }                
+        let fmt = this.info['Format'];
+        if (fmt == 'cc') {
+            this.moves.readMove_cc(moveStr, this);
+        } else {
+            let resultStr = moveStr.match(/\s(1-0|0-1|1\/2-1\/2|\*)(?!\S)/m);
+            if (resultStr != null) {
+                this.info['Result'] = resultStr[1];
+            } //  # 棋局结果
+            let remark = infoStr.match(/\{([\s\S]*?)\}/gm);
+            if (remark) {
+                this.rootMove.remark = remark[0];
+            }   
+            this.moves.readMove_ICCSzh(moveStr, fmt, this);
+        }
+        console.log(this.toString());
+        console.log(this.rootMove.toString());
+        console.log(this);          
     }
 
-    readFile(){
+    readFile() {
         let files = document.getElementById("fileInput").files;
+        if (!files) {
+            return ;
+        }
         let reader = new FileReader();
         reader.readAsText(files[0]);//, "utf-8", "GB2312"
-        reader.onload = () => {
-            document.getElementById("fileNum").innerHTML = `${reader.result}`;
-        }
-        reader.onerror = (e) => console.log("Error", e);
-        /*
-        for (let file of files) {
-            //this.__readpgn(file);
-            ;
-        }
-        */
-        console.log('Listening!');
+        reader.onload = () => this.__readpgn(reader.result);
+        reader.onerror = (e) => console.log("Error", e);                
+        
+        this.setFen();
+        this.moves.setMoveInfo(this);
+
+        let fileDisplay = document.getElementById("fileDisplay");
+        fileDisplay.innerHTML = '';
+        fileDisplay.appendChild(document.createTextNode(`${this.toString()}`));        
     }
 
-    loadViews(views){
+    loadViews(views) {
         this.views = views;
         this.notifyViews();
     }
 
-    notifyViews(){
+    notifyViews() {
         //'通知视图更新'
         if (!('views' in this))
             return ;
@@ -1003,14 +834,13 @@ Object.defineProperties(board, {
 });
 
 
-function constValue(){
+function constValue() {
     const BOTTOM = 'bottom';
     const TOP = 'top';
     const NumCols = 9;
     const NumRows = 10;
     const MinColNo = 0;
-    const MaxColNo = 8;
-    const ColChars = 'abcdefghi';
+    const maxColNo = 8;
     // 初始布局
     const NumToChinese = {
         RED: {
@@ -1032,46 +862,19 @@ function constValue(){
     };
     const FEN = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r - - 0 1';
     return { BOTTOM, TOP,
-            NumCols, NumRows, MaxColNo, MinColNo,
+            NumCols, NumRows, maxColNo, MinColNo,
             NumToChinese, ChineseToNum, FEN };
 }
 
 // 取得数字序列数组
-function range(from, end){
+function range(from, end) {
     let array = new Array();
-    for (let i = from; i < end; i++){
+    for (let i = from; i < end; i++) {
         array.push(i);
     }
     return array;
 }
 
-/*
-function readFile() {
-    var nBytes = 0,
-        oFiles = document.getElementById("fileInput").files,
-        nFiles = oFiles.length;
-    for (var nFileId = 0; nFileId < nFiles; nFileId++) {
-      nBytes += oFiles[nFileId].size;
-    }
-    var sOutput = nBytes + " bytes";
-    // optional code for multiples approximation
-    for (var aMultiples = ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"], nMultiple = 0, nApprox = nBytes / 1024; nApprox > 1; nApprox /= 1024, nMultiple++) {
-      sOutput = nApprox.toFixed(3) + " " + aMultiples[nMultiple] + " (" + nBytes + " bytes)";
-    }
-    // end of optional code
-    document.getElementById("fileNum").innerHTML = nFiles;
-    document.getElementById("fileSize").innerHTML = sOutput;
-    console.log(nFiles, sOutput);
-    }
-*/
 
-function addListener(listener) {
-    let fileInput = document.getElementById("fileInput");
-    let body = document.getElementById("body");    
-    fileInput.addEventListener("change", listener, false);
-    //body.addEventListener("load", listener, false);
-}
-
-console.log(board);
-addListener(board.readFile);
+//console.log(board);
 
