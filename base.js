@@ -1,31 +1,12 @@
-//中国象棋基础信息
+//中国象棋基础信息 by-cjp
     
-export {blankBoard, View, multRepl, xmlIndent};
-
-const blankBoard = `
-┏━┯━┯━┯━┯━┯━┯━┯━┓
-┃　│　│　│╲│╱│　│　│　┃
-┠─┼─┼─┼─╳─┼─┼─┼─┨
-┃　│　│　│╱│╲│　│　│　┃
-┠─╬─┼─┼─┼─┼─┼─╬─┨
-┃　│　│　│　│　│　│　│　┃
-┠─┼─╬─┼─╬─┼─╬─┼─┨
-┃　│　│　│　│　│　│　│　┃
-┠─┴─┴─┴─┴─┴─┴─┴─┨
-┃　　　　　　　　　　　　　　　┃
-┠─┬─┬─┬─┬─┬─┬─┬─┨
-┃　│　│　│　│　│　│　│　┃
-┠─┼─╬─┼─╬─┼─╬─┼─┨
-┃　│　│　│　│　│　│　│　┃
-┠─╬─┼─┼─┼─┼─┼─╬─┨
-┃　│　│　│╲│╱│　│　│　┃
-┠─┼─┼─┼─╳─┼─┼─┼─┨
-┃　│　│　│╱│╲│　│　│　┃
-┗━┷━┷━┷━┷━┷━┷━┷━┛
-`
-// 边框粗线
+export {View, range, partition, multRepl, xmlIndent,
+        BLACK, RED, CharNames, TypeChars,        
+        NumCols, NumRows, maxColNo, MinColNo,
+        NumToChinese, ChineseToNum, FEN, BlankBoard, ColChars };
 
  
+// 视图模型
 class View {
     constructor(model) {
         self.board = model;
@@ -35,17 +16,32 @@ class View {
         // 更新视图（由数据模型发起）
     }
 }
-         
-function multRepl(text, replStrs) {
-    // 一次替换多个子字符串（字典定义）（方法来源于PythonCook）
+
+// 取得数字序列数组
+function range(from, end) {
+    let array = new Array();
+    for (let i = from; i < end; i++) {
+        array.push(i);
+    }
+    return array;
+}
+
+// 以regexp为分界，将字符串分成两段
+function partition(string, regexp) {
+    let index = Math.max(string.indexOf(regexp), 0);
+    return [string.slice(0, index), string.slice(index)];
+}
+
+// 一次替换多个子字符串（字典定义）（方法来源于PythonCook）
+function multRepl(text, replStrs) {    
     for (let oldNew of replStrs) {
         text = text.replace(RegExp(oldNew[0], 'g'), oldNew[1]);
     }
     return text;
 }
 
-function xmlIndent(elem, islast=False, level=0) {
-    //'Get pretty look 取得漂亮的外观'
+//'Get pretty look 取得漂亮的外观'
+function xmlIndent(elem, islast=False, level=0) {    
     function __isblank(text) {
         //return not text or not text.expandtabs(4).strip()
     }
@@ -67,4 +63,73 @@ function xmlIndent(elem, islast=False, level=0) {
     elem.tail = __cuttab(
         tabstr if __isblank(elem.tail) else __addblank(elem.tail), islast)
         */
-}        
+} 
+
+
+// 棋子相关常量
+const BLACK = 'black';
+const RED = 'red';
+const CharNames = {
+    'K': '帅', 'A': '仕', 'B': '相', 'N': '马',
+    'R': '车', 'C': '炮', 'P': '兵',
+    'k': '将', 'a': '士', 'b': '象', 'n': '马',
+    'r': '车', 'c': '炮', 'p': '卒', '_': ''
+};
+// 全部棋子ch值与中文名称映射字典
+const TypeChars = {
+    'King': 'kK',
+    'Pawn': 'pP',
+    'AdvisorBishop': 'abAB',
+    'Stronge': 'rncpRNCP',
+    'LineMove': 'krcpKRCP'
+};
+
+
+// 棋盘相关常量
+const NumCols = 9;
+const NumRows = 10;
+const MinColNo = 0;
+const maxColNo = 8;
+const FEN = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r - - 0 1';
+const ColChars = 'abcdefghi';
+const NumToChinese = {
+    RED: {
+        1: '一', 2: '二', 3: '三', 4: '四', 5: '五',
+        6: '六', 7: '七', 8: '八', 9: '九'
+    },
+    BLACK: {
+        1: '１', 2: '２', 3: '３', 4: '４', 5: '５',
+        6: '６', 7: '７', 8: '８', 9: '９'
+    }
+};
+const ChineseToNum = {
+    '一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
+    '六': 6, '七': 7, '八': 8, '九': 9,
+    '１': 1, '２': 2, '３': 3, '４': 4, '５': 5,
+    '６': 6, '７': 7, '８': 8, '９': 9,
+    '前': 0, '中': 1, '后': -1,
+    '进': 1, '退': -1, '平': 0
+};
+const BlankBoard = `
+┏━┯━┯━┯━┯━┯━┯━┯━┓
+┃　│　│　│╲│╱│　│　│　┃
+┠─┼─┼─┼─╳─┼─┼─┼─┨
+┃　│　│　│╱│╲│　│　│　┃
+┠─╬─┼─┼─┼─┼─┼─╬─┨
+┃　│　│　│　│　│　│　│　┃
+┠─┼─╬─┼─╬─┼─╬─┼─┨
+┃　│　│　│　│　│　│　│　┃
+┠─┴─┴─┴─┴─┴─┴─┴─┨
+┃　　　　　　　　　　　　　　　┃
+┠─┬─┬─┬─┬─┬─┬─┬─┨
+┃　│　│　│　│　│　│　│　┃
+┠─┼─╬─┼─╬─┼─╬─┼─┨
+┃　│　│　│　│　│　│　│　┃
+┠─╬─┼─┼─┼─┼─┼─╬─┨
+┃　│　│　│╲│╱│　│　│　┃
+┠─┼─┼─┼─╳─┼─┼─┼─┨
+┃　│　│　│╱│╲│　│　│　┃
+┗━┷━┷━┷━┷━┷━┷━┷━┛
+`
+// 边框粗线            
+
