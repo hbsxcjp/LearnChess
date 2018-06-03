@@ -1,9 +1,10 @@
 // 中国象棋棋子类型 by-cjp
 
 import * as base from './base.js';
-export {Pieces};    
+export { Pieces };
 
-    
+//console.log('piece.js!');
+
 class Piece {
     constructor(char) {
         this._color = char >= 'a' ? base.BLACK : base.RED;
@@ -21,13 +22,17 @@ class Piece {
     get name() {
         return base.CharNames[this._char];
     }
-    
-    isOf(type) {        
-        return base.TypeChars[type].indexOf(this._char) >= 0;
+
+    isKing() {
+        return base.KingChars.has(this._char);
+    }
+
+    isStronge() {
+        return base.StrongeChars.has(this._char);
     }
 
     // 棋子的全部活动位置(默认：车马炮的活动范围)
-    getCanSeats(seats, side='') {
+    getCanSeats(seats, side = '') {
         return seats.allSeats();
     }
 
@@ -76,14 +81,14 @@ class Bishop extends Piece {
 
     getMoveSeats(seats) {
         return this.filterColorSeats(this.filterObstacleSeats(
-                Seats.getBishopMove_CenSeats(seats.getSeat(this)), seats), seats);
+            Seats.getBishopMove_CenSeats(seats.getSeat(this)), seats), seats);
     }
 }
 
 class Knight extends Piece {
     getMoveSeats(seats) {
         return this.filterColorSeats(this.filterObstacleSeats(
-                Seats.getKnightMove_LegSeats(seats.getSeat(this)), seats), seats);
+            Seats.getKnightMove_LegSeats(seats.getSeat(this)), seats), seats);
     }
 }
 
@@ -125,7 +130,7 @@ class Cannon extends Piece {
                 }
                 else if (!seats.isBlank(seat)) {
                     if (seats.getColor(seat) != this._color) {
-                            moveSeats.push(seat);
+                        moveSeats.push(seat);
                     }
                     break;
                 }
@@ -144,13 +149,13 @@ class Pawn extends Piece {
         return this.filterColorSeats(seats.getPawnMoveSeats(seats.getSeat(this)));
     }
 }
- 
+
 // 一副棋子类
 class Pieces {
-    constructor() {      
+    constructor() {
         const pieceTypes = {
-                'k': King, 'a': Advisor, 'b': Bishop,
-                'n': Knight, 'r': Rook, 'c': Cannon, 'p': Pawn
+            'k': King, 'a': Advisor, 'b': Bishop,
+            'n': Knight, 'r': Rook, 'c': Cannon, 'p': Pawn
         };
 
         this.pieceChars = ['K', 'A', 'A', 'B', 'B', 'N', 'N', 'R', 'R',
@@ -165,7 +170,7 @@ class Pieces {
     }
 
     getKing(color) {
-        return this.pies[color == base.RED? 0: 16];
+        return this.pies[color == base.RED ? 0 : 16];
     }
 
     getOthSidePiece(piece) {
@@ -176,9 +181,9 @@ class Pieces {
         let result = [];
         let chars = this.pieceChars.slice(0);
         for (let [seat, char] of seatChars) { // seatChars 由多个[seat, char]组成
-            if (char == '_') 
+            if (char == '_')
                 continue;
-            for (let i=0; i<chars.length; i++) {
+            for (let i = 0; i < chars.length; i++) {
                 if (char == chars[i]) {
                     result.push([seat, this.pies[i]]);
                     chars[i] = '';
@@ -187,7 +192,7 @@ class Pieces {
             }
         }
         return result;
-    }    
+    }
 }
 
 

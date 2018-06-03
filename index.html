@@ -1,25 +1,31 @@
 <!DOCTYPE html>
-<html style="width:100%;height:100%;">  
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <title>
-      学象棋
-    </title>
-  </head>  
-  <body id="body" style="width:100%;margin: 0; height: 800px;padding:0">
+<html style="width:100%;height:100%;">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>
+    学象棋
+  </title>
+</head>
+
+<body id="body" style="width:100%;margin: 0; height: 800px;padding:0">
+  <p>
+    Hi, 你好！
+  </p>
+  <p class='h1'>
+    网站正在建设中......，请耐心等待。
+  </p>
+  <form name="uploadForm">
     <p>
-      Hi, 你好！
+      <input id="fileInput" type="file" name="myFiles" multiple>
     </p>
-    <p class='h1'>
-      网站正在建设中......，请耐心等待。
+    <p> 棋局显示: </p>
+    <p>
+      <span id="fileDisplay"></span>
     </p>
-    <form name="uploadForm">
-      <p><input id="fileInput" type="file" name="myFiles" multiple></p>
-      <p> 棋局显示: </p>
-      <p><span id="fileDisplay">0</span></p>
-    </form>
-    <!-- <script type="module" src="piece.js"></script> 引入piece模型-->
-    <script type="module" src="board.js"></script><!-- 引入board模型-->
-  </body>
+  </form>
+  <script type="module" src="./board.js"></script>
+</body>
+
 </html>

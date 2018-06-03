@@ -1,11 +1,14 @@
 //中国象棋基础信息 by-cjp
-    
-export {View, range, partition, multRepl, xmlIndent,
-        BLACK, RED, CharNames, TypeChars,        
-        NumCols, NumRows, maxColNo, MinColNo,
-        NumToChinese, ChineseToNum, FEN, BlankBoard, ColChars };
 
- 
+export {
+    View, range, multRepl, xmlIndent,
+    BLACK, RED, CharNames, KingChars, StrongeChars,
+    PieceNames, LineMovePieceNames, AdvisorBishopNames, PawnNames,
+    NumCols, NumRows, maxColNo, MinColNo,
+    NumToChinese, ChineseToNum, FEN, BlankBoard, ColChars
+};
+//console.log('base.js!');
+
 // 视图模型
 class View {
     constructor(model) {
@@ -26,14 +29,9 @@ function range(from, end) {
     return array;
 }
 
-// 以regexp为分界，将字符串分成两段
-function partition(string, regexp) {
-    let index = Math.max(string.indexOf(regexp), 0);
-    return [string.slice(0, index), string.slice(index)];
-}
 
 // 一次替换多个子字符串（字典定义）（方法来源于PythonCook）
-function multRepl(text, replStrs) {    
+function multRepl(text, replStrs) {
     for (let oldNew of replStrs) {
         text = text.replace(RegExp(oldNew[0], 'g'), oldNew[1]);
     }
@@ -41,7 +39,7 @@ function multRepl(text, replStrs) {
 }
 
 //'Get pretty look 取得漂亮的外观'
-function xmlIndent(elem, islast=False, level=0) {    
+function xmlIndent(elem, islast = False, level = 0) {
     function __isblank(text) {
         //return not text or not text.expandtabs(4).strip()
     }
@@ -63,8 +61,7 @@ function xmlIndent(elem, islast=False, level=0) {
     elem.tail = __cuttab(
         tabstr if __isblank(elem.tail) else __addblank(elem.tail), islast)
         */
-} 
-
+}
 
 // 棋子相关常量
 const BLACK = 'black';
@@ -76,14 +73,12 @@ const CharNames = {
     'r': '车', 'c': '炮', 'p': '卒', '_': ''
 };
 // 全部棋子ch值与中文名称映射字典
-const TypeChars = {
-    'King': 'kK',
-    'Pawn': 'pP',
-    'AdvisorBishop': 'abAB',
-    'Stronge': 'rncpRNCP',
-    'LineMove': 'krcpKRCP'
-};
-
+const KingChars = new Set('kK');
+const StrongeChars = new Set('rncpRNCP');
+const PieceNames = new Set('帅仕相马车炮兵将士象卒');
+const LineMovePieceNames = new Set('帅车炮兵将卒');
+const AdvisorBishopNames = new Set('仕相士象');
+const PawnNames = new Set('兵卒');
 
 // 棋盘相关常量
 const NumCols = 9;
