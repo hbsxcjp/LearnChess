@@ -19,10 +19,9 @@ class ChessInstance {
 
     constructor() {
         this.info = new Info();
-        this.board = new Board();
         this.pieces = new Pieces();
+        this.board = new Board();
         this.moves = new Moves();
-        this.rootMove = this.moves.rootMove; // 本类对象方便引用
 
         this.addListener(this.readFile());
     }
@@ -35,27 +34,20 @@ class ChessInstance {
         return [this.info.toString(), this.moves.toLocaleString(), this.board.toString()].join('\n');
     }
 
-    setCounts(move) {
-        this.movCount += 1;
-        if (move.remark) {
-            this.remCount += 1;
-            this.remLenMax = Math.max(this.remLenMax, move.remark.length);
-        }
-    }
-
     __readBin(file) {
-        movestruct1 = struct.Struct('3B');
-        movestruct2 = struct.Struct('H');
+        //movestruct1 = struct.Struct('3B');
+        //movestruct2 = struct.Struct('H');
 
     }
 
     __readPgn(pgnText) {
         let [infoStr, moveStr] = pgnText.split('\n1\.');
         this.info.setFromPgn(infoStr);
+        this.board.setFen(this);
 
         let fmt = this.info.info['Format'];
         if (fmt == 'cc') {
-            this.moves.readMove_cc(moveStr, this);
+            this.moves.rootMove.fromCC(moveStr, this.board);
         } else {
             let resultStr = moveStr.match(/\s(1-0|0-1|1\/2-1\/2|\*)(?!\S)/m);
             if (resultStr != null) {
@@ -63,22 +55,21 @@ class ChessInstance {
             } //  # 棋局结果
             let remark = infoStr.match(/\{([\s\S]*?)\}/gm);
             if (remark) {
-                this.rootMove.remark = remark[0];
+                this.moves.rootMove.remark = remark[0];
             }
-            this.moves.readMove_ICCSzh(moveStr, fmt, this);
+            this.moves.rootMove.fromICCSZh(moveStr, this.board, fmt);
         }
-
-        this.board.setFen(this);
-
+        this.moves.initNums(this.board);
+        
         let fileDisplay = document.getElementById("fileDisplay");
         fileDisplay.innerHTML = '';
         fileDisplay.appendChild(document.createTextNode(`${this.toString()}`));
 
         //console.log(this);
-        console.log(JSON.stringify(this.rootMove));
+        console.log(JSON.stringify(this.moves.rootMove));
         //console.log(pgnText);
         console.log(this.toString());
-        //console.log(this.toLocaleString());
+        console.log(this.toLocaleString());
     }
 
     readFile() {
@@ -101,7 +92,7 @@ class ChessInstance {
         //'通知视图更新'
         if (!('views' in this))
             return;
-        for (view in this.views)
+        for (let view of this.views)
             view.updateview();
     }
 }

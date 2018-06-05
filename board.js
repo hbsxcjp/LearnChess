@@ -338,13 +338,13 @@ class Board {
         return this.getLivePieces().filter(p => p.color == color);
     }
 
-    getSidenNameSeats(color, name) {
+    getSideNameSeats(color, name) {
         return this.getLiveSidePieces(color).filter(
             p => p.name == name).map(p => this.getSeat(p));
     }
 
     getSideNameColSeats(color, name, col) {
-        return this.getSidenNameSeats(color, name).filter(s => Board.getCol(s) == col);
+        return this.getSideNameSeats(color, name).filter(s => Board.getCol(s) == col);
     }
 
     getEatedPieces() {
@@ -361,7 +361,7 @@ class Board {
                 return true;
             }
             for (let piece of this.getLiveSidePieces(otherColor)) {
-                if (piece.isStronge() && (kingSeat in piece.getMoveSeats(this))) {
+                if (piece.isStronge() && (piece.getMoveSeats(this).indexOf(kingSeat) >= 0)) {
                     return true;
                 }
             }
@@ -381,10 +381,10 @@ class Board {
     __go(move) {
         let fseat = move.fseat,
             tseat = move.tseat;
-        let eatPiece = this.pies[tseat];
+        move.eatPiece = this.pies[tseat];
         this.pies[tseat] = this.pies[fseat];
         this.pies[fseat] = null;
-        return eatPiece;
+        return move.eatPiece;
     }
 
     __back(move) {
@@ -435,11 +435,11 @@ class Board {
         return fen;
     }
 
-    getFen(board) {
+    getFen(chessInstance) {
         let currentMove = this.currentMove;
-        board.moves.toFirst(board);
+        chessInstance.moves.toFirst(chessInstance.board);
         let fen = `${this.__fen()} ${this.firstColor == base.BLACK ? 'b' : 'r'} - - 0 0`;
-        board.moves.goTo(currentMove, board);
+        chessInstance.moves.goTo(currentMove, chessInstance.board);
         //assert this.info['FEN'] == fen, '\n原始:{}\n生成:{}'.format(this.info['FEN'], fen)
         return fen;
     }
@@ -452,7 +452,7 @@ class Board {
         this.bottomside = this.getKingSeat(base.RED) < 45 ? base.RED : base.BLACK;
     }
 
-    setFen(board, fen = '') {
+    setFen(chessInstance, fen = '') {
         function __numtolines() {
             //'数字字符: 下划线字符串'
             let numtolines = [];
@@ -473,7 +473,7 @@ class Board {
 
         if (!fen)
             fen = base.FEN;
-        board.info.info['FEN'] = fen;
+        chessInstance.info.info['FEN'] = fen;
         let afens = fen.split(' ');
         fen = afens[0];
         let fenstr = fen.split('/').reverse().join('');
@@ -485,35 +485,35 @@ class Board {
         for (let i = 0; i < charls.length; i++) {
             seatChars.push([i, charls[i]]);
         }
-        this.setSeatPieces(board.pieces.seatPieces(seatChars));
+        this.setSeatPieces(chessInstance.pieces.seatPieces(seatChars));
         this.firstColor = afens[1] == 'b' ? base.BLACK : base.RED;
         this.currentMove = this.rootMove;
     }
 
-    changeSide(board, changeType = 'exchange') {
+    changeSide(chessInstance, changeType = 'exchange') {
 
         let __changeSeat = (transfun) => {
             //'根据transfun改置每个move的fseat,tseat'            
             function __seat(move) {
                 move.fseat = transfun(move.fseat);
                 move.tseat = transfun(move.tseat);
-                if (move.next_)
-                    __seat(move.next_);
+                if (move.next)
+                    __seat(move.next);
                 if (move.other)
                     __seat(move.other);
             }
 
-            if (this.rootMove.next_)
-                __seat(this.rootMove.next_);
+            if (this.rootMove.next)
+                __seat(this.rootMove.next);
         } //# 驱动调用递归函数
 
         let currentMove = this.currentMove;
-        board.moves.toFirst();
+        chessInstance.moves.toFirst();
         let seatPieces;
         if (changeType == 'exchange') {
             this.firstColor = this.firstColor == base.BLACK ? base.RED : base.BLACK;
             seatPieces = this.getLivePieces().map(
-                p => [this.getSeat(piece), board.pieces.getOthSidePiece(piece)]);
+                p => [this.getSeat(piece), chessInstance.pieces.getOthSidePiece(piece)]);
         } else {
             let rotateSeat = (s) => Math.abs(s - 89);
             let symmetrySeat = (s) => (Math.floor(s / 9) + 1) * 9 - s % 9 - 1;

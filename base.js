@@ -5,7 +5,7 @@ export {
     BLACK, RED, CharNames, KingChars, StrongeChars,
     PieceNames, LineMovePieceNames, AdvisorBishopNames, PawnNames,
     NumCols, NumRows, maxColNo, MinColNo,
-    NumToChinese, ChineseToNum, FEN, BlankBoard, ColChars
+    Num_Chinese, DirectionToNum, FEN, BlankBoard, ColChars
 };
 //console.log('base.js!');
 
@@ -87,21 +87,11 @@ const MinColNo = 0;
 const maxColNo = 8;
 const FEN = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r - - 0 1';
 const ColChars = 'abcdefghi';
-const NumToChinese = {
-    RED: {
-        1: '一', 2: '二', 3: '三', 4: '四', 5: '五',
-        6: '六', 7: '七', 8: '八', 9: '九'
-    },
-    BLACK: {
-        1: '１', 2: '２', 3: '３', 4: '４', 5: '５',
-        6: '６', 7: '７', 8: '８', 9: '９'
-    }
+const Num_Chinese = {
+    'red': ' 一二三四五六七八九',
+    'black': ' １２３４５６７８９'
 };
-const ChineseToNum = {
-    '一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
-    '六': 6, '七': 7, '八': 8, '九': 9,
-    '１': 1, '２': 2, '３': 3, '４': 4, '５': 5,
-    '６': 6, '７': 7, '８': 8, '９': 9,
+const DirectionToNum = {
     '前': 0, '中': 1, '后': -1,
     '进': 1, '退': -1, '平': 0
 };
