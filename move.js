@@ -1,7 +1,7 @@
 // 中国象棋着法树节点类型 by-cjp
 
 import * as base from './base.js';
-import { Seats } from './seat.js';
+//import { Board } from './board.js';
 export { Move, Moves };
 //console.log('move.js!');
 
@@ -139,7 +139,7 @@ class Moves {
         return [totalstr, walkstr, remstr].join('\n');
     }
 
-    setMoveSeat(move, board) {
+    setMoveSeat(move, chessInstance) {
         //根据中文纵线着法描述取得源、目标位置: (fseat, tseat)
         function __zhcol_col(zhcol) {
             return (isBottomSide ? 9 - base.ChineseToNum[zhcol] : base.ChineseToNum[zhcol] - 1);
@@ -148,11 +148,11 @@ class Moves {
         let fseat, tseat;
         let color = this.currentColor,
             zhstr = move.zhstr,
-            bdseats = board.seats;
-        let isBottomSide = bdseats.isBottomSide(color);
+            board = chessInstance.seats;
+        let isBottomSide = board.isBottomSide(color);
         let name = zhstr[0];
         if (base.PieceNames.has(name)) {
-            let seats = bdseats.getSideNameColSeats(color, name, __zhcol_col(zhstr[1]));
+            let seats = board.getSideNameColSeats(color, name, __zhcol_col(zhstr[1]));
             // assert bool(seats), ('没有找到棋子 => %s color:%s name: %s\n%s' % (zhstr, color, name, this))
 
             let index = (seats.length == 2 && base.AdvisorBishopNames.has(name)
@@ -163,11 +163,11 @@ class Moves {
             //# 未获得棋子, 查找某个排序（前后中一二三四五）某方某个名称棋子
             let index = base.ChineseToNum[zhstr[0]],
                 name = zhstr[1];
-            let seats = bdseats.getSideNameSeats(color, name);
+            let seats = board.getSideNameSeats(color, name);
             // assert len(seats) >= 2, 'color: %s name: %s 棋子列表少于2个! \n%s' % (     color, name, this)
 
             if (PawnNames.indexOf(name) >= 0) {
-                let seats = bdseats.sortPawnSeats(isBottomSide, seats);  //# 获取多兵的列
+                let seats = board.sortPawnSeats(isBottomSide, seats);  //# 获取多兵的列
                 if (seats.length > 3) {
                     index -= 1;
                 }
@@ -204,7 +204,7 @@ class Moves {
         */
     }
 
-    setZhstr(move, board) {
+    setZhstr(move, chessInstance) {
         '根据源、目标位置: (fseat, tseat)取得中文纵线着法描述'
         function __col_chcol(color, col) {
             return NumToChinese[color][isBottomSide ? 9 - col : col + 1];
@@ -212,20 +212,20 @@ class Moves {
 
         let fseat = move.fseat,
             tseat = move.tseat,
-            bdseats = board.seats;
-        let frompiece = bdseats.getPiece(fseat);
+            board = chessInstance.board;
+        let frompiece = board.getPiece(fseat);
         let color = frompiece.color,
             name = frompiece.name;
-        let isBottomSide = board.isBottomSide(color);
+        let isBottomSide = chessInstance.isBottomSide(color);
         let fromrow = Seats.getRow(fseat),
             fromcol = Seats.getCol(fseat);
-        let seats = bdseats.getSideNameColSeats(color, name, fromcol);
+        let seats = board.getSideNameColSeats(color, name, fromcol);
         let length = seats.length;
         let firstStr, lastStr;
         if (length > 1 && StrongePieceNames.indexOf(name) >= 0) {
             if (PawnNames.indexOf(name) >= 0) {
-                seats = bdseats.sortPawnSeats(isBottomSide,
-                    bdseats.getSideNameSeats(color, name));
+                seats = board.sortPawnSeats(isBottomSide,
+                    board.getSideNameSeats(color, name));
                 length = seats.length;
             }
             else if (isBottomSide) {  //# '车', '马', '炮'
@@ -271,22 +271,22 @@ class Moves {
         }
     }
 
-    initMoveInfo(board, seated = false) {
+    initMoveInfo(chessInstance, seated = false) {
         //'根据board设置树节点的zhstr或seat'
         let __set = (move) => {
             if (seated) {
-                this.setZhstr(move, board);
+                this.setZhstr(move, chessInstance);
             } else {
-                this.setMoveSeat(move, board);
+                this.setMoveSeat(move, chessInstance);
             }
             move.maxCol = this.maxCol; // # 本着在视图中的列数
             this.othCol = Math.max(this.othCol, move.othCol);
             this.maxRow = Math.max(this.maxRow, move.stepNo);
-            this.__to(move, board);
+            this.__to(move, chessInstance);
             if (move.next_) {
                 __set(move.next_);
             }
-            this.__to(move.prev, board);
+            this.__to(move.prev, chessInstance);
             if (move.other) {
                 this.maxCol += 1;
                 __set(move.other);
@@ -301,7 +301,7 @@ class Moves {
         } // # 驱动调用递归函数            
     }
 
-    readMove_ICCSzh(moveStr, fmt, board) {
+    readMove_ICCSzh(moveStr, fmt, chessInstance) {
         let __readMoves = (move, mvstr, isOther) => {  //# 非递归 
             let lastMove = move;               
             let isFirst = true;
@@ -317,7 +317,7 @@ class Moves {
                 if (remark) {
                     newMove.remark = remark;
                 }
-                board.setCounts(newMove); // # 设置内部计数值
+                chessInstance.setCounts(newMove); // # 设置内部计数值
                 if (isOther && isFirst) { // # 第一步为变着
                     lastMove.setOther(newMove);                                        
                 } else {
@@ -331,7 +331,7 @@ class Moves {
 
         let moverg = / ([^\.\{\}\s]{4})(?= )(?:\s+\{([\s\S]*?)\})?/gm; // 插入:(?= )
         //# 走棋信息 (?:pattern)匹配pattern,但不获取匹配结果;  注解[\s\S]*?: 非贪婪
-        board.setCounts(this.rootMove); // # 设置内部计数值
+        chessInstance.setCounts(this.rootMove); // # 设置内部计数值
         let thisMove, leftStr, index;
         let othMoves = [this.rootMove];
         let isOther = false;
@@ -352,10 +352,10 @@ class Moves {
                 isOther = false;
             }
         }
-        this.initMoveInfo(board);
+        this.initMoveInfo(chessInstance);
     }
 
-    readMove_cc(moveStr, board) {
+    readMove_cc(moveStr, chessInstance) {
 
         let __readMove = (move, row, col, isOther = False) => {
             let zhstr = moves[row][col].match(moverg);
@@ -364,7 +364,7 @@ class Moves {
                 newMove.stepNo = row;
                 newMove.zhstr = zhstr[0].slice(0, 4);
                 newMove.remark = rems[`(${row}, ${col})`] || '';
-                board.setCounts(newMove); // # 设置内部计数值
+                chessInstance.setCounts(newMove); // # 设置内部计数值
                 if (isOther) {
                     move.setOther(newMove);
                 } else {
@@ -407,11 +407,11 @@ class Moves {
             }
             this.rootMove.remark = rems['(0, 0)'] || '';
         }
-        board.setCounts(this.rootMove); // # 设置内部计数值
+        chessInstance.setCounts(this.rootMove); // # 设置内部计数值
         if (moves.length > 1) {
             __readMove(this.rootMove, 1, 0);
         }
-        this.initMoveInfo(board);
+        this.initMoveInfo(chessInstance);
     }
 
     get currentColor() {
@@ -438,69 +438,69 @@ class Moves {
         return result.reverse();
     }
 
-    __to(move, board) {
-        move.eatPiece = board.seats.__go(move);
+    __to(move, chessInstance) {
+        move.eatPiece = chessInstance.seats.__go(move);
         this.currentMove = move;
     }
 
-    go(board) {
+    go(chessInstance) {
         if (this.currentMove.next_) {
-            this.__to(this.currentMove.next_, board);
+            this.__to(this.currentMove.next_, chessInstance);
         }
     }
 
-    back(board) {
+    back(chessInstance) {
         if (this.currentMove.prev) {
-            this.__to(this.currentMove.prev, board);
+            this.__to(this.currentMove.prev, chessInstance);
         }
     }
 
-    goOther(board) {
+    goOther(chessInstance) {
         //'移动到当前节点的另一变着'
         if (this.currentMove.other) {
             let toMove = this.currentMove.other;
             this.back();
-            this.__to(toMove, board);
+            this.__to(toMove, chessInstance);
         }
     }
 
-    toFirst(board) {
+    toFirst(chessInstance) {
         while (this.currentMove !== this.rootMove) {
-            this.back(board);
+            this.back(chessInstance);
         }
     }
 
-    toLast(board) {
+    toLast(chessInstance) {
         while (this.currentMove.next_) {
-            this.go(board);
+            this.go(chessInstance);
         }
     }
 
-    toStep(board, inc = 1) {
+    toStep(chessInstance, inc = 1) {
         let go = inc > 0;
         inc = abs(inc);
         for (let i = 0; i < inc; i++) {
-            if (go) this.go(board);
-            else this.back(board);
+            if (go) this.go(chessInstance);
+            else this.back(chessInstance);
         }
     }
 
-    goTo(move, board) {
+    goTo(move, chessInstance) {
         if (move === this.currentMove) return;
-        this.toFirst(board);
-        this.getPrevMoves(move).forEach(m => this.__to(m, board));
+        this.toFirst(chessInstance);
+        this.getPrevMoves(move).forEach(m => this.__to(m, chessInstance));
     }
 
-    addMove(moveData, board, isOther = false) {
+    addMove(moveData, chessInstance, isOther = false) {
         let move = new Move(isOther ? this.currentMove.prev : this.currentMove);
         [move.fseat, move.tseat, move.remark] = moveData; // 调用参数同此规格
-        board.setZhstr(move);
+        chessInstance.setZhstr(move);
         if (isOther) {
             this.currentMove.setOther(move);
             this.goOther();
         } else {
             this.currentMove.setNext(move);
-            this.go(board);
+            this.go(chessInstance);
         }
     }
 
