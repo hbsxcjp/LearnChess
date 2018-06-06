@@ -6,24 +6,14 @@ import { Pieces } from './piece.js';
 import { Board } from './board.js';
 import { Move, Moves } from './move.js';
 
-//console.log('chessInstance.js!');
 
 class ChessInstance {
-
-    addListener(listener) {
-        let fileInput = document.getElementById("fileInput");
-        fileInput.addEventListener("change", listener, false);
-        //let body = document.getElementById("body");    
-        //body.addEventListener("load", listener, false);
-    }
-
     constructor() {
-        this.info = new Info();
         this.pieces = new Pieces();
         this.board = new Board();
+        this.info = new Info();
         this.moves = new Moves();
-
-        this.addListener(this.readFile());
+        document.getElementById("fileInput").addEventListener("change", this.readFile(), false);
     }
 
     toString() {
@@ -46,6 +36,7 @@ class ChessInstance {
         this.board.setFen(this);
 
         let fmt = this.info.info['Format'];
+        //console.log(fmt);
         if (fmt == 'cc') {
             this.moves.rootMove.fromCC(moveStr, this.board);
         } else {
@@ -57,6 +48,7 @@ class ChessInstance {
             if (remark) {
                 this.moves.rootMove.remark = remark[0];
             }
+            console.log(moveStr);
             this.moves.rootMove.fromICCSZh(moveStr, this.board, fmt);
         }
         this.moves.initNums(this.board);
@@ -66,7 +58,7 @@ class ChessInstance {
         fileDisplay.appendChild(document.createTextNode(`${this.toString()}`));
 
         //console.log(this);
-        console.log(JSON.stringify(this.moves.rootMove));
+        console.log(JSON.stringify(this.moves.rootMove)); //
         //console.log(pgnText);
         console.log(this.toString());
         console.log(this.toLocaleString());

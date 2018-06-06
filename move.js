@@ -15,6 +15,25 @@ class MoveJSON {
         this.next = next;
         this.other = other;
     }
+
+    toJSON() {
+        let __getJSON = (move) => Boolean(move) ? this.toJSON(move) : null;
+        return `{"fseat":${this.fseat},"tseat":${this.tseat},"remark":${this.remark},"zhStr":${this.zhStr},"next":${__getJSON(this.next)},"other":${__getJSON(this.other)}`;
+    }
+    
+/*
+    // （rootMove）调用
+    fromJSON(moveJson, board) {
+        // 还原函数，根据JSON字符串生成对象时调用：JSON.parse(moveJson, reviver);
+        function reviver(key, value) {
+            return (key == 'next' || key == 'other') ? new Move(value) : value;
+        }
+
+        this.setNext(JSON.parse(moveJson, reviver));
+        //this.initInfo(board, true);
+    }
+*/
+
 }
 
 // 着法节点类
@@ -26,10 +45,6 @@ class Move extends MoveJSON {
         this.stepNo = 0; // 着法深度
         this.othCol = 0; // 变着广度
         this.maxCol = 0; // 图中列位置（需结合board确定）
-    }
-
-    toJSON() {
-        return JSON.stringify(this.next, ['fseat', 'tseat', 'remark', 'zhStr', 'next', 'other']);
     }
 
     toString() {
@@ -214,17 +229,6 @@ class Move extends MoveJSON {
         if (this.next != null) { //# and this.movcount < 300: # 步数太多则太慢             
             __set(this.next);
         } // # 驱动调用递归函数            
-    }
-
-    // （rootMove）调用
-    fromJSON(moveJson, board) {
-        // 还原函数，根据JSON字符串生成对象时调用：JSON.parse(moveJson, reviver);
-        function reviver(key, value) {
-            return (key == 'next' || key == 'other') ? new Move(value) : value;
-        }
-
-        this.setNext(JSON.parse(moveJson, reviver));
-        this.initInfo(board, true);
     }
 
     // （rootMove）调用
