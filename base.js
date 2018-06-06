@@ -7,7 +7,6 @@ export {
     NumCols, NumRows, maxColNo, MinColNo,
     Num_Chinese, DirectionToNum, FEN, BlankBoard, ColChars
 };
-//console.log('base.js!');
 
 // 视图模型
 class View {

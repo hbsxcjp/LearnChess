@@ -4,7 +4,7 @@ import * as base from './base.js';
 import { Info } from './info.js';
 import { Pieces } from './piece.js';
 import { Board } from './board.js';
-import { Move, Moves } from './move.js';
+import { Moves } from './move.js';
 
 
 class ChessInstance {
@@ -24,44 +24,37 @@ class ChessInstance {
         return [this.info.toString(), this.moves.toLocaleString(), this.board.toString()].join('\n');
     }
 
-    __readBin(file) {
+    readBin(file) {
         //movestruct1 = struct.Struct('3B');
         //movestruct2 = struct.Struct('H');
 
     }
 
-    __readPgn(pgnText) {
+    readPgn(pgnText) {
         let [infoStr, moveStr] = pgnText.split('\n1\.');
         this.info.setFromPgn(infoStr);
-        this.board.setFen(this);
-
-        let fmt = this.info.info['Format'];
-        //console.log(fmt);
-        if (fmt == 'cc') {
-            this.moves.rootMove.fromCC(moveStr, this.board);
-        } else {
-            let resultStr = moveStr.match(/\s(1-0|0-1|1\/2-1\/2|\*)(?!\S)/m);
-            if (resultStr != null) {
-                this.info.info['Result'] = resultStr[1];
-            } //  # 棋局结果
-            let remark = infoStr.match(/\{([\s\S]*?)\}/gm);
-            if (remark) {
-                this.moves.rootMove.remark = remark[0];
-            }
-            console.log(moveStr);
-            this.moves.rootMove.fromICCSZh(moveStr, this.board, fmt);
+        this.board.setFen(this);        
+        this.moves.read(moveStr, this.info.info['Format'], this.board);
+        let resultStr = moveStr.match(/\s(1-0|0-1|1\/2-1\/2|\*)(?!\S)/m);
+        if (resultStr != null) {
+            this.info.info['Result'] = resultStr[1];
+        } //  # 棋局结果
+        let remark = infoStr.match(/\{([\s\S]*?)\}/gm);
+        if (remark) {
+            this.moves.rootMove.remark = remark[0];
         }
-        this.moves.initNums(this.board);
         
         let fileDisplay = document.getElementById("fileDisplay");
         fileDisplay.innerHTML = '';
         fileDisplay.appendChild(document.createTextNode(`${this.toString()}`));
 
         //console.log(this);
-        console.log(JSON.stringify(this.moves.rootMove)); //
+        let rootMoveJSON = JSON.stringify(this.moves.rootMove, null, 4);
+        //console.log(rootMoveJSON); //
         //console.log(pgnText);
-        console.log(this.toString());
-        console.log(this.toLocaleString());
+        //console.log(this.toString());
+        //console.log(this.moves.rootMove.toString());
+        //console.log(this.toLocaleString());
     }
 
     readFile() {
@@ -71,7 +64,7 @@ class ChessInstance {
         }
         let reader = new FileReader();
         reader.readAsText(files[0]);//, "utf-8", "GB2312"
-        reader.onload = () => this.__readPgn(reader.result);
+        reader.onload = () => this.readPgn(reader.result);
         reader.onerror = (e) => console.log("Error", e);
     }
 

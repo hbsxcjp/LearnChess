@@ -452,7 +452,7 @@ class Board {
         this.bottomside = this.getKingSeat(base.RED) < 45 ? base.RED : base.BLACK;
     }
 
-    setFen(chessInstance, fen = '') {
+    setFen(chessInstance) {
         function __numtolines() {
             //'数字字符: 下划线字符串'
             let numtolines = [];
@@ -471,9 +471,7 @@ class Board {
             return false;
         }
 
-        if (!fen)
-            fen = base.FEN;
-        chessInstance.info.info['FEN'] = fen;
+        let fen = chessInstance.info.info['FEN'];
         let afens = fen.split(' ');
         fen = afens[0];
         let fenstr = fen.split('/').reverse().join('');
