@@ -50,11 +50,12 @@ class ChessInstance {
 
         //console.log(this);
         let rootMoveJSON = JSON.stringify(this.moves.rootMove, null, 4);
+        console.log(JSON.parse(rootMoveJSON).toLocaleString());
         //console.log(rootMoveJSON); //
         //console.log(pgnText);
         //console.log(this.toString());
         //console.log(this.moves.rootMove.toString());
-        console.log(this.toLocaleString());
+        //console.log(this.toLocaleString());
     }
 
     readFile() {

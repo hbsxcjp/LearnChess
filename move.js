@@ -65,72 +65,60 @@ class Move {
 
         //根据中文纵线着法描述取得源、目标位置: (fseat, tseat)
         let __setSeatFromZhStr = () => {
-            let __getCol = (color, zhCol) => {
-                let num = base.Num_Chinese[color].indexOf(zhCol);
-                return (isBottomSide ? 9 - num : num - 1);
-            }
+            let __getNum = (char) => base.Num_Chinese[color].indexOf(char) + 1;
+            let __getCol = (num) => isBottomSide ? 9 - num : num - 1;
 
-            let fseat,
+            let fseat, seats, index,
                 zhStr = this.zhStr,
                 // 根据最后一个字符判断该着法属于哪一方
                 color = base.Num_Chinese[base.RED].indexOf(zhStr[zhStr.length - 1]) >= 0 ? base.RED : base.BLACK,
                 isBottomSide = board.isBottomSide(color),
                 name = zhStr[0];
             if (base.PieceNames.has(name)) {
-                let seats = board.getSideNameColSeats(color, name, __getCol(color, zhStr[1]));
-                if (!seats) {
-                    console.log(`没有找到棋子 => ${zhStr} color:${color} name: ${name}\n${this}`);
-                }
-
-                let index = (seats.length == 2 && base.AdvisorBishopNames.has(name)
-                    && ((zhStr[2] == '退') == isBottomSide)) ? seats.length - 1 : 0;
+                seats = board.getSideNameColSeats(color, name, __getCol(__getNum(zhStr[1])));
                 //# 排除：士、象同列时不分前后，以进、退区分棋子
-                fseat = seats[index];
+                index = (seats.length == 2 && base.AdvisorBishopNames.has(name)
+                    && ((zhStr[2] == '退') == isBottomSide)) ? seats.length - 1 : 0;                
             } else {
                 //# 未获得棋子, 查找某个排序（前后中一二三四五）某方某个名称棋子
-                let index = base.Chinese_Index[zhStr[0]], // ?
-                    name = zhStr[1];
-                let seats = board.getSideNameSeats(color, name);
-                if (seats.length < 2) {
-                    console.log(`棋子列表少于2个 => ${zhStr} color:${color} name: ${name}\n${this}`);
-                }
-
+                index = base.Chinese_Index[zhStr[0]];
+                name = zhStr[1];
                 if (base.PawnNames.has(name)) {
-                    seats = board.sortPawnSeats(isBottomSide, seats);  //# 获取多兵的列
-                    if (seats.length > 3) 
-                        index -= 1;
-                } else if (isBottomSide) { //# 修正index
-                    seats.reverse();
+                    seats = board.sortPawnSeats(isBottomSide, seats);  //# 获取多兵的列                    
+                    if (seats.length == 3 && name == '后')
+                        index += 1;
+                } else {                    
+                    seats = board.getSideNameSeats(color, name);
+                    if (seats.length < 2) {
+                    console.log(`棋子列表少于2个 => ${zhStr} color:${color} name: ${name}\n${this}`);
+                    }
+                    if (isBottomSide) { //# 修正index
+                        seats.reverse();
+                    }
                 }
-                fseat = seats[index];
             }
+            //if (seats.length == 0) console.log(`没有找到棋子 => ${zhStr} color:${color} name: ${name}\n${board}`);
+            this.fseat = fseat = seats[index];
 
-            let movDir = base.DirectionToNum[zhStr[2]] * (isBottomSide ? 1 : -1);
-            // //# '根据中文行走方向取得棋子的内部数据方向（进：1，退：-1，平：0）'
-            let toCol =__getCol(color, zhStr[3]);
+            // '根据中文行走方向取得棋子的内部数据方向（进：1，退：-1，平：0）'
+            let movDir = base.Direction_Num[zhStr[2]] * (isBottomSide ? 1 : -1);
+            let num = __getNum(zhStr[3])
+            let toCol = __getCol(num);
             if (base.LineMovePieceNames.has(name)) {
                 //#'获取直线走子toseat'
                 let row = Board.getRow(fseat);
-
-
                 this.tseat = (movDir == 0) ? Board.getSeat(row, toCol) : (
-                    Board.getSeat(row + movDir * base.Chinese_Index[zhStr[3]],
-                        Board.getCol(fseat)));
-
-
-
+                    Board.getSeat(row + movDir * num, Board.getCol(fseat)));  // 此处toCol是指进退的行数
             } else {
                 //#'获取斜线走子：仕、相、马toseat'
                 let step = Math.abs(toCol - Board.getCol(fseat));//  # 相距1或2列            
                 let inc = base.AdvisorBishopNames.has(name) ? step : (step == 1 ? 2 : 1);
                 this.tseat = Board.getSeat(Board.getRow(fseat) + movDir * inc, toCol);
+                //console.log(this.tseat);
             }
-            // 可设断言
-            this.fseat = fseat;
-            if (!fseat) {
-                console.log(this.toString(), fseat, board.toString());
-                //console.log(this.toString());
-            }
+            this.setZhStr(board);
+            //if (zhStr != this.zhStr)
+            //    console.log(zhStr, this.fseat, this.tseat, '=>', this.zhStr);
         }
 
         switch (fmt) {
@@ -157,8 +145,8 @@ class Move {
 
         // 根据源、目标位置: (fseat, tseat)取得中文纵线着法描述
         let __setZhStr = (board) => {
-            function __getZhCol(color, col) {
-                return base.Num_Chinese[color][isBottomSide ? 9 - col : col + 1];
+            function __getChar(color, num) {
+                return base.Num_Chinese[color][isBottomSide ? 8 - num : num];
             }
 
             let firstStr;
@@ -185,12 +173,12 @@ class Move {
                 firstStr = indexStr[seats.indexOf(fseat)] + name;
             } else {
                 //#仕(士)和相(象)不用“前”和“后”区别，因为能退的一定在前，能进的一定在后
-                firstStr = name + __getZhCol(color, fromCol);
+                firstStr = name + __getChar(color, fromCol);
             }
 
             let toRow = Board.getRow(tseat),
                 toCol = Board.getCol(tseat),
-                zhCol = __getZhCol(color, toCol),
+                zhCol = __getChar(color, toCol),
                 toChar = toRow == fromRow ? '平' : (isBottomSide == (toRow > fromRow) ? '进' : '退'),
                 toZhCol = (toRow == fromRow || base.LineMovePieceNames.has(name) ? zhCol :
                     base.Num_Chinese[color][abs(toRow - fromRow)]);
@@ -208,30 +196,33 @@ class Move {
         }
     }
 
-    readBin(move) {
-        /*
-        hasothernextrem, fi, ti = movestruct1.unpack(fileobj.read(3));
-        move.fseat, move.tseat = fi, ti;
-        if (hasothernextrem & 0x20) {
-            rlength = movestruct2.unpack(fileobj.read(2))[0];
-            move.remark = fileobj.read(rlength).decode();
+    // （rootMove）调用, '根据chessInstance设置树节点的seat'
+    __setSeat(fmt, board) {
+        let __set = (move) => {
+            move.setSeat(fmt, board);
+            board.__go(move);
+            if (move.next_)
+                __set(move.next_);
+            board.__back(move);
+            if (move.other)
+                __set(move.other);
+        }        
+        // # 驱动调用递归函数
+        if (this.next_) { //# and this.movcount < 300: # 步数太多则太慢             
+            __set(this.next_);
         }
-        if (hasothernextrem & 0x80) {
-            move.setOther(Move(move.prev));
-            __readMove(move.other);
-        }
-        if (hasothernextrem & 0x40) {
-            move.setNext(Move(move));
-            __readMove(move.next_);
-        }
-        */
     }
 
+    fromJSON(moveJSON, board) {
+        let rootMove = JSON.parse(MoveJSON);
+        
+    }
+    
     // （rootMove）调用
     fromString(moveStr, fmt, board) {
 
-        let __readFromICCSZh = () => {
-            let __readMoves = (move, mvstr, isOther) => {  //# 非递归 
+        let __fromICCSZh = () => {
+            let __setMoves = (move, mvstr, isOther) => {  //# 非递归 
                 let lastMove = move;
                 let isFirst = true;
                 let mstr_remark;
@@ -263,20 +254,20 @@ class Move {
                 index = leftStrs[0].indexOf(rightrg);
                 if (index < 0) {
                     //不存在'\) '的情况；# 如果注解里存在'\) '的情况，则可能会有误差                
-                    othMoves.push(__readMoves(thisMove, leftStrs.shift(), isOther));
+                    othMoves.push(__setMoves(thisMove, leftStrs.shift(), isOther));
                     isOther = true;
                 } else {
                     leftStr = leftStrs[0].slice(0, index);
                     leftStrs[0] = leftStrs[0].slice(index + 2);
-                    __readMoves(thisMove, leftStr, isOther);
+                    __setMoves(thisMove, leftStr, isOther);
                     isOther = false;
                 }
             }
         }
 
-        let __readFromCC = () => {
+        let __fromCC = () => {
 
-            let __readMove = (move, row, col, isOther = False) => {
+            let __setMove = (move, row, col, isOther = False) => {
                 let zhStr = moves[row][col].match(moverg);
                 if (zhStr) {
                     let newMove = new Move();
@@ -289,16 +280,16 @@ class Move {
                         move.setNext(newMove);
                     }
                     if (zhStr[0][4] == '…') {
-                        __readMove(newMove, row, col + 1, True);
+                        __setMove(newMove, row, col + 1, True);
                     }
                 } else if (isOther) {
                     while (moves[row][col][0] == '…') {
                         col += 1;
                     }
-                    __readMove(move, row, col, True);
+                    __setMove(move, row, col, True);
                 }
                 if (zhStr && row < moves.length - 1 && moves[row + 1]) {
-                    __readMove(newMove, row + 1, col);
+                    __setMove(newMove, row + 1, col);
                 }
             }
 
@@ -326,41 +317,23 @@ class Move {
                 this.remark = rems['(0, 0)'] || '';
             }
             if (moves.length > 1) {
-                __readMove(this, 1, 0);
-            }
-        }
-
-        //'根据chessInstance设置树节点的seat'
-        let __setSeat = () => {
-
-            let __set = (move) => {
-                move.setSeat(fmt, board);
-                board.__go(move);
-                if (move.next_)
-                    __set(move.next_);
-                board.__back(move);
-                if (move.other)
-                    __set(move.other);
-            }        
-            // # 驱动调用递归函数
-            if (this.next_) { //# and this.movcount < 300: # 步数太多则太慢             
-                __set(this.next_);
+                __setMove(this, 1, 0);
             }
         }
 
         switch (fmt) {
             case 'cc':
-                __readFromCC();
+                __fromCC();
                 break;
             case 'zh':
-                __readFromICCSZh();
+                __fromICCSZh();
                 break;
             case 'ICCS': 
                 ;
             default:
                 break;
         }
-        __setSeat();
+        this.__setSeat(fmt, board);
     }
 }
 

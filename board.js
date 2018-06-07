@@ -275,7 +275,7 @@ class Board {
 
     constructor() {
         this.pies = new Array(90);
-        this.bottomside = base.RED;
+        this.bottomSide = base.RED;
 
     }
 
@@ -315,7 +315,7 @@ class Board {
     }
 
     getSide(color) {
-        return this.bottomSide == color ? 'bottom' : 'top';
+        return this.isBottomSide(color) ? 'bottom' : 'top';
     }
 
     getKingSeat(color) {
@@ -445,11 +445,11 @@ class Board {
     }
 
     setSeatPieces(seatPieces) {
-        this.pies = new Array(90);
+        this.pies = (new Array(90)).fill(null);
         for (let [seat, piece] of seatPieces) {
             this.pies[seat] = piece;
         }
-        this.bottomside = this.getKingSeat(base.RED) < 45 ? base.RED : base.BLACK;
+        this.bottomSide = this.getKingSeat(base.RED) < 45 ? base.RED : base.BLACK;
     }
 
     setFen(chessInstance) {
