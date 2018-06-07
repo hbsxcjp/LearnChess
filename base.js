@@ -5,7 +5,7 @@ export {
     BLACK, RED, CharNames, KingChars, StrongeChars,
     PieceNames, LineMovePieceNames, AdvisorBishopNames, PawnNames,
     NumCols, NumRows, maxColNo, MinColNo,
-    Num_Chinese, DirectionToNum, FEN, BlankBoard, ColChars
+    Num_Chinese, Chinese_Index, DirectionToNum, FEN, BlankBoard, ColChars
 };
 
 // 视图模型
@@ -90,8 +90,11 @@ const Num_Chinese = {
     'red': ' 一二三四五六七八九',
     'black': ' １２３４５６７８９'
 };
+const Chinese_Index = {
+    '一':1, '二':2, '三':3, '四':4, '五':5,
+    '前': 0, '中': 1, '后': -1
+};
 const DirectionToNum = {
-    '前': 0, '中': 1, '后': -1,
     '进': 1, '退': -1, '平': 0
 };
 const BlankBoard = `

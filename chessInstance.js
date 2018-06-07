@@ -34,7 +34,7 @@ class ChessInstance {
         let [infoStr, moveStr] = pgnText.split('\n1\.');
         this.info.setFromPgn(infoStr);
         this.board.setFen(this);        
-        this.moves.read(moveStr, this.info.info['Format'], this.board);
+        this.moves.setFromPgn(moveStr, this.info.info['Format'], this.board);
         let resultStr = moveStr.match(/\s(1-0|0-1|1\/2-1\/2|\*)(?!\S)/m);
         if (resultStr != null) {
             this.info.info['Result'] = resultStr[1];
@@ -54,7 +54,7 @@ class ChessInstance {
         //console.log(pgnText);
         //console.log(this.toString());
         //console.log(this.moves.rootMove.toString());
-        //console.log(this.toLocaleString());
+        console.log(this.toLocaleString());
     }
 
     readFile() {
