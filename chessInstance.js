@@ -33,7 +33,7 @@ class ChessInstance {
     readPgn(pgnText) {
         let [infoStr, moveStr] = pgnText.split('\n1\.');
         this.info.setFromPgn(infoStr);
-        this.board.setFen(this);        
+        this.board.setFen(this);
         this.moves.setFromPgn(moveStr, this.info.info['Format'], this.board);
         let resultStr = moveStr.match(/\s(1-0|0-1|1\/2-1\/2|\*)(?!\S)/m);
         if (resultStr != null) {
@@ -43,30 +43,30 @@ class ChessInstance {
         if (remark) {
             this.moves.rootMove.remark = remark[0];
         }
-        
+
         let fileDisplay = document.getElementById("fileDisplay");
         fileDisplay.innerHTML = '';
         fileDisplay.appendChild(document.createTextNode(`${this.toString()}`));
 
-        //console.log(this);
-        let rootMoveJSON = JSON.stringify(this.moves.rootMove, null, 4);
-        console.log(JSON.parse(rootMoveJSON).toLocaleString());
-        //console.log(rootMoveJSON); //
-        //console.log(pgnText);
+        //let moveJSON = JSON.stringify(this.moves.rootMove, null, 4);
+        //console.log(JSON.parse(moveJSON).toLocaleString());
+        //this.moves.setFromJSON(moveJSON, this.board);
+        //console.log(this.moves.toString());
+        console.log(this.moves.toLocaleString());
         //console.log(this.toString());
-        //console.log(this.moves.rootMove.toString());
         //console.log(this.toLocaleString());
     }
 
     readFile() {
         let files = document.getElementById("fileInput").files;
-        if (!Boolean(files)) {
-            return;
+        for (let file of files) {
+            let reader = new FileReader();
+            reader.readAsText(file, "GB2312");//, "utf-8"
+            reader.onload = () => {
+                this.readPgn(reader.result);
+            }
+            reader.onerror = (e) => console.log("Error", e);
         }
-        let reader = new FileReader();
-        reader.readAsText(files[0]);//, "utf-8", "GB2312"
-        reader.onload = () => this.readPgn(reader.result);
-        reader.onerror = (e) => console.log("Error", e);
     }
 
     loadViews(views) {

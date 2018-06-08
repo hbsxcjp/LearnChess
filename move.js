@@ -24,7 +24,7 @@ class Move {
 
     toJSON() {
         let __getJSON = (move) => Boolean(move) ? move.toJSON() : null;
-        return `{"fseat":${this.fseat},"tseat":${this.tseat},"remark":\"${this.remark}\","zhStr":\"${this.zhStr}\","next_":${__getJSON(this.next_)},"other":${__getJSON(this.other)}}`;
+        return `{"fseat":${this.fseat},"tseat":${this.tseat},"remark":\"${this.remark}\","zhStr":\"${this.zhStr}\","other":${__getJSON(this.other)},"next_":${__getJSON(this.next_)}}`;
     }
 
     toString() {
@@ -56,7 +56,7 @@ class Move {
         this.other = other;
     }
 
-    setSeat(fmt, board) {
+    __setSeat(fmt, board) {
         let __setSeatFromICCS = () => {
             let [fcol, frow, tcol, trow] = [...this.zhStr]; // ...展开运算符
             this.fseat = Board.getSeat(Number(frow), ColChars[fcol]);
@@ -83,6 +83,7 @@ class Move {
                 //# 未获得棋子, 查找某个排序（前后中一二三四五）某方某个名称棋子
                 index = base.Chinese_Index[zhStr[0]];
                 name = zhStr[1];
+                seats = board.getSideNameSeats(color, name);
                 if (base.PawnNames.has(name)) {
                     seats = board.sortPawnSeats(isBottomSide, seats);  //# 获取多兵的列                    
                     if (seats.length == 3 && name == '后')
@@ -116,9 +117,10 @@ class Move {
                 this.tseat = Board.getSeat(Board.getRow(fseat) + movDir * inc, toCol);
                 //console.log(this.tseat);
             }
-            this.setZhStr(board);
+            // 断言已通过
+            //this.__setICCSZhStr(board);
             //if (zhStr != this.zhStr)
-            //    console.log(zhStr, this.fseat, this.tseat, '=>', this.zhStr);
+            //    console.log(zhStr, '=>', this.fseat, this.tseat, '=>', this.zhStr);
         }
 
         switch (fmt) {
@@ -134,7 +136,7 @@ class Move {
         }
     }
 
-    setZhStr(fmt, board) {
+    __setICCSZhStr(fmt, board) {
         let __setICCS = () => {
             let fcol = ColChars.indexOf(Board.getCol(this.fseat)),
                 frow = Board.getRow(this.fseat),
@@ -152,9 +154,9 @@ class Move {
             let firstStr;
             let fseat = this.fseat,
                 tseat = this.tseat,
-                frompiece = board.getPiece(fseat),
-                color = frompiece.color,
-                name = frompiece.name,
+                fromPiece = board.getPiece(fseat),
+                color = fromPiece.color,
+                name = fromPiece.name,
                 isBottomSide = board.isBottomSide(color),
                 fromRow = Board.getRow(fseat),
                 fromCol = Board.getCol(fseat),
@@ -180,33 +182,45 @@ class Move {
                 toCol = Board.getCol(tseat),
                 zhCol = __getChar(color, toCol),
                 toChar = toRow == fromRow ? '平' : (isBottomSide == (toRow > fromRow) ? '进' : '退'),
-                toZhCol = (toRow == fromRow || base.LineMovePieceNames.has(name) ? zhCol :
-                    base.Num_Chinese[color][abs(toRow - fromRow)]);
-            // 可设断言
+                toZhCol = (toRow == fromRow || !base.LineMovePieceNames.has(name)) ? zhCol : (
+                    base.Num_Chinese[color][Math.abs(toRow - fromRow) - 1]);            
             this.zhStr = firstStr + toChar + toZhCol;
+            // 断言已通过
+            //[fseat, tseat] = [this.fseat, this.tseat];
+            //this.__setSeat(fmt, board);
+            //if (fseat != this.fseat || tseat != this.tseat)
+            //    console.log(fseat, tseat, '=>', this.zhStr, '=>', this.fseat, this.tseat);
         }
 
         switch (fmt) {
             case 'ICCS':
-                return __setICCS();
+                __setICCS();
+                break;
             case 'zh':
-                return __setZhStr(board);
+                __setZhStr(board);
+                break;
             default:
                 return; // 预留
         }
     }
 
-    // （rootMove）调用, '根据chessInstance设置树节点的seat'
-    __setSeat(fmt, board) {
+    // （rootMove）调用, 设置树节点的seat or zhStr'
+    __setSeatOrZhStrs(typeStr, fmt, board) {
         let __set = (move) => {
-            move.setSeat(fmt, board);
+            if (isSeats) {
+                move.__setSeat(fmt, board);
+            } else {
+                move.__setICCSZhStr(fmt, board);
+            }
             board.__go(move);
             if (move.next_)
                 __set(move.next_);
             board.__back(move);
             if (move.other)
                 __set(move.other);
-        }        
+        }
+        
+        let isSeats = typeStr == 'seats';
         // # 驱动调用递归函数
         if (this.next_) { //# and this.movcount < 300: # 步数太多则太慢             
             __set(this.next_);
@@ -214,8 +228,24 @@ class Move {
     }
 
     fromJSON(moveJSON, board) {
-        let rootMove = JSON.parse(MoveJSON);
-        
+        let __init = (move, moveData) => {
+            move.fseat = moveData.fseat;
+            move.tseat = moveData.tseat;
+            move.remark = moveData.remark;
+            move.zhStr = moveData.zhStr;
+            if (moveData.other) {
+                move.other = new Move();
+                __init(move.other, moveData.other);
+            }                  
+            if (moveData.next_) {
+                move.next_ = new Move();
+                __init(move.next_, moveData.next_); 
+            }
+        }
+
+        // # 驱动调用递归函数
+        __init(this, JSON.parse(moveJSON));
+        //this.__setSeatOrZhStrs('zhStr', 'zh', board);
     }
     
     // （rootMove）调用
@@ -333,7 +363,7 @@ class Move {
             default:
                 break;
         }
-        this.__setSeat(fmt, board);
+        this.__setSeatOrZhStrs('seats', fmt, board);
     }
 }
 
@@ -366,7 +396,6 @@ class Moves {
         if (this.rootMove.next_) {
             __addstrl(this.rootMove.next_);
         } // 驱动调用函数
-        //console.log(movestrl);
         return movestrl.join('');
     }
 
@@ -445,6 +474,11 @@ class Moves {
 
     setFromPgn(moveStr, fmt, board) {
         this.rootMove.fromString(moveStr, fmt, board);
+        this.initNums(board);
+    }
+
+    setFromJSON(moveJSON, board) {
+        this.rootMove.fromJSON(moveJSON, board);
         this.initNums(board);
     }
 
@@ -535,7 +569,7 @@ class Moves {
     addMove(fseat, tseat, remark, board, isOther = false) {
         let move = new Move();
         [move.fseat, move.tseat, move.remark] = [fseat, tseat, remark]; // 调用参数同此规格
-        move.setZhStr(board);
+        move.__setZhStr(board);
         if (isOther) {
             this.currentMove.setOther(move);
             this.goOther(board);
@@ -554,5 +588,4 @@ class Moves {
     }
 
 }
-
 
