@@ -170,7 +170,7 @@ class Pieces {
     }
 
     getKing(color) {
-        return this.pies[color == base.RED ? 0 : 16];
+        return this.pies[color === base.RED ? 0 : 16];
     }
 
     getOthSidePiece(piece) {
@@ -181,10 +181,10 @@ class Pieces {
         let result = [];
         let chars = this.pieceChars.slice(0);
         for (let [seat, char] of seatChars) { // seatChars 由多个[seat, char]组成
-            if (char == '_')
+            if (char === '_')
                 continue;
             for (let i = 0; i < chars.length; i++) {
-                if (char == chars[i]) {
+                if (char === chars[i]) {
                     result.push([seat, this.pies[i]]);
                     chars[i] = '';
                     break;

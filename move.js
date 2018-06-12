@@ -23,9 +23,33 @@ class Move {
     }
 
     toJSON() {
-        let __getJSON = (move) => Boolean(move) ? move.toJSON() : null;
-        return `{"fseat":${this.fseat},"tseat":${this.tseat},"remark":\"${this.remark}\","zhStr":\"${this.zhStr}\","other":${__getJSON(this.other)},"next_":${__getJSON(this.next_)}}`;
+        let __replace = (str) => {
+            str.replace(/\\n/gm, "\\\\n");  //注意php中替换的时候只能用双引号"\n"
+            str.replace(/\\r/gm, "\\\\r");    
+            /*
+            str.replace(/\n/gm, "\\n");  //注意php中替换的时候只能用双引号"\n"
+            str.replace(/\r/gm, "\\r");            
+            str.replace(">", "&gt;");  
+            str.replace("<", "&lt;");  
+            str.replace(" ", "&nbsp;");  
+            str.replace("\"", "&quot;");  
+            str.replace("\'", "&#39;");  
+            str.replace("\\", "\\\\");//对斜线的转义 
+            */ 
+            return str;
+        }
+        console.log(__replace(this.remark));
+        return `{"fseat":${this.fseat},"tseat":${this.tseat},"remark":\"${__replace(this.remark)}\","zhStr":\"${this.zhStr}\","other":${this.other && this.other.toJSON()},"next_":${this.next_ && this.next_.toJSON()}}`;
     }
+
+    /*
+    toMove(key, value) {
+        if (key in ['next_', 'other']) {
+            return value && JSON.parse(value); //  如何把结果转为Move类？
+        }
+        return value;
+    }
+    */
 
     toString() {
         return `{"stepNo":${this.stepNo},"othCol":${this.othCol},"maxCol":${this.maxCol},"fseat":${this.fseat},"tseat":${this.tseat},"zhStr":"${this.zhStr}","remark":"${this.remark}"}`;
@@ -34,7 +58,7 @@ class Move {
     getStr(fmt) {
         switch (fmt) {
             case 'ICCS':
-                return this.stepNo == 0 ? '' : `${ColChars[Board.getCol(this.fseat)]}${Board.getRow(this.fseat)}${ColChars[Board.getCol(this.tseat)]}${Board.getRow(this.tseat)}`;
+                return this.stepNo === 0 ? '' : `${ColChars[Board.getCol(this.fseat)]}${Board.getRow(this.fseat)}${ColChars[Board.getCol(this.tseat)]}${Board.getRow(this.tseat)}`;
             case 'zh':
                 return this.zhStr;
             default: // 留待以后添加其他的描述格式
@@ -77,8 +101,8 @@ class Move {
             if (base.PieceNames.has(name)) {
                 seats = board.getSideNameColSeats(color, name, __getCol(__getNum(zhStr[1])));
                 //# 排除：士、象同列时不分前后，以进、退区分棋子
-                index = (seats.length == 2 && base.AdvisorBishopNames.has(name)
-                    && ((zhStr[2] == '退') == isBottomSide)) ? seats.length - 1 : 0;                
+                index = (seats.length === 2 && base.AdvisorBishopNames.has(name)
+                    && ((zhStr[2] === '退') === isBottomSide)) ? seats.length - 1 : 0;                
             } else {
                 //# 未获得棋子, 查找某个排序（前后中一二三四五）某方某个名称棋子
                 index = base.Chinese_Index[zhStr[0]];
@@ -86,7 +110,7 @@ class Move {
                 seats = board.getSideNameSeats(color, name);
                 if (base.PawnNames.has(name)) {
                     seats = board.sortPawnSeats(isBottomSide, seats);  //# 获取多兵的列                    
-                    if (seats.length == 3 && name == '后')
+                    if (seats.length === 3 && name === '后')
                         index += 1;
                 } else {                    
                     seats = board.getSideNameSeats(color, name);
@@ -98,7 +122,7 @@ class Move {
                     }
                 }
             }
-            //if (seats.length == 0) console.log(`没有找到棋子 => ${zhStr} color:${color} name: ${name}\n${board}`);
+            //if (seats.length === 0) console.log(`没有找到棋子 => ${zhStr} color:${color} name: ${name}\n${board}`);
             this.fseat = fseat = seats[index];
 
             // '根据中文行走方向取得棋子的内部数据方向（进：1，退：-1，平：0）'
@@ -108,12 +132,12 @@ class Move {
             if (base.LineMovePieceNames.has(name)) {
                 //#'获取直线走子toseat'
                 let row = Board.getRow(fseat);
-                this.tseat = (movDir == 0) ? Board.getSeat(row, toCol) : (
+                this.tseat = (movDir === 0) ? Board.getSeat(row, toCol) : (
                     Board.getSeat(row + movDir * num, Board.getCol(fseat)));  // 此处toCol是指进退的行数
             } else {
                 //#'获取斜线走子：仕、相、马toseat'
                 let step = Math.abs(toCol - Board.getCol(fseat));//  # 相距1或2列            
-                let inc = base.AdvisorBishopNames.has(name) ? step : (step == 1 ? 2 : 1);
+                let inc = base.AdvisorBishopNames.has(name) ? step : (step === 1 ? 2 : 1);
                 this.tseat = Board.getSeat(Board.getRow(fseat) + movDir * inc, toCol);
                 //console.log(this.tseat);
             }
@@ -162,7 +186,7 @@ class Move {
                 fromCol = Board.getCol(fseat),
                 seats = board.getSideNameColSeats(color, name, fromCol),
                 length = seats.length;
-            if (length > 1 && StrongePieceNames.has(name)) {
+            if (length > 1 && base.StrongeChars.has(name)) {
                 if (base.PawnNames.has(name)) {
                     seats = board.sortPawnSeats(isBottomSide,
                         board.getSideNameSeats(color, name));
@@ -181,8 +205,8 @@ class Move {
             let toRow = Board.getRow(tseat),
                 toCol = Board.getCol(tseat),
                 zhCol = __getChar(color, toCol),
-                toChar = toRow == fromRow ? '平' : (isBottomSide == (toRow > fromRow) ? '进' : '退'),
-                toZhCol = (toRow == fromRow || !base.LineMovePieceNames.has(name)) ? zhCol : (
+                toChar = toRow === fromRow ? '平' : (isBottomSide === (toRow > fromRow) ? '进' : '退'),
+                toZhCol = (toRow === fromRow || !base.LineMovePieceNames.has(name)) ? zhCol : (
                     base.Num_Chinese[color][Math.abs(toRow - fromRow) - 1]);            
             this.zhStr = firstStr + toChar + toZhCol;
             // 断言已通过
@@ -205,13 +229,9 @@ class Move {
     }
 
     // （rootMove）调用, 设置树节点的seat or zhStr'
-    __setSeatOrZhStrs(typeStr, fmt, board) {
+    initSet(setFunc, fmt, board) {
         let __set = (move) => {
-            if (isSeats) {
-                move.__setSeat(fmt, board);
-            } else {
-                move.__setICCSZhStr(fmt, board);
-            }
+            setFunc.call(move, fmt, board);
             board.__go(move);
             if (move.next_)
                 __set(move.next_);
@@ -220,150 +240,138 @@ class Move {
                 __set(move.other);
         }
         
-        let isSeats = typeStr == 'seats';
         // # 驱动调用递归函数
         if (this.next_) { //# and this.movcount < 300: # 步数太多则太慢             
             __set(this.next_);
         }
     }
 
-    fromJSON(moveJSON, board) {
+    fromJSON(moveJSON) {
         let __init = (move, moveData) => {
             move.fseat = moveData.fseat;
             move.tseat = moveData.tseat;
             move.remark = moveData.remark;
             move.zhStr = moveData.zhStr;
+            move.other = moveData.other;
+            move.next_ = moveData.next_;
             if (moveData.other) {
-                move.other = new Move();
+                move.setOther(new Move());
                 __init(move.other, moveData.other);
             }                  
             if (moveData.next_) {
-                move.next_ = new Move();
+                move.setNext(new Move());
                 __init(move.next_, moveData.next_); 
             }
         }
 
         // # 驱动调用递归函数
-        __init(this, JSON.parse(moveJSON));
-        //this.__setSeatOrZhStrs('zhStr', 'zh', board);
+        //__init(this, JSON.parse(moveJSON));
+        console.log(moveJSON);
+        console.log(JSON.parse(moveJSON), typeof JSON.parse(moveJSON));
+        __init(this, JSON.parse(JSON.parse(moveJSON)));  // 多次试验，不知为何需要两次解析？
     }
     
     // （rootMove）调用
-    fromString(moveStr, fmt, board) {
-
-        let __fromICCSZh = () => {
-            let __setMoves = (move, mvstr, isOther) => {  //# 非递归 
-                let lastMove = move;
-                let isFirst = true;
-                let mstr_remark;
-                while ((mstr_remark = moverg.exec(mvstr)) != null) {
-                    let newMove = new Move();
-                    newMove.zhStr = mstr_remark[1];
-                    newMove.remark = mstr_remark[2] ? mstr_remark[2] : '';
-                    if (isOther && isFirst) { // # 第一步为变着
-                        lastMove.setOther(newMove);
-                    } else {
-                        lastMove.setNext(newMove);
-                    }
-                    isFirst = false;
-                    lastMove = newMove;
-                }
-                return lastMove;
-            }
-
-            let moverg = / ([^\.\{\}\s]{4})(?= )(?:\s+\{([\s\S]*?)\})?/gm; // 插入:(?= )
-            //# 走棋信息 (?:pattern)匹配pattern,但不获取匹配结果;  注解[\s\S]*?: 非贪婪
-            let thisMove, leftStr, index;
-            let othMoves = [this];
-            let isOther = false;
-            let leftStrs = moveStr.split(/\(\d+\./gm);
-            //# 如果注解里存在‘\(\d+\.’的情况，则可能会有误差
-            let rightrg = ') ';
-            while (leftStrs.length > 0) {
-                thisMove = isOther ? othMoves[othMoves.length - 1] : othMoves.pop();
-                index = leftStrs[0].indexOf(rightrg);
-                if (index < 0) {
-                    //不存在'\) '的情况；# 如果注解里存在'\) '的情况，则可能会有误差                
-                    othMoves.push(__setMoves(thisMove, leftStrs.shift(), isOther));
-                    isOther = true;
+    fromICCSZh(moveStr, fmt, board) {
+        let __setMoves = (move, mvstr, isOther) => {  //# 非递归 
+            let lastMove = move;
+            let isFirst = true;
+            let mstr_remark;
+            while ((mstr_remark = moverg.exec(mvstr)) != null) {
+                let newMove = new Move();
+                newMove.zhStr = mstr_remark[1];
+                newMove.remark = mstr_remark[2] ? mstr_remark[2] : '';
+                if (isOther && isFirst) { // # 第一步为变着
+                    lastMove.setOther(newMove);
                 } else {
-                    leftStr = leftStrs[0].slice(0, index);
-                    leftStrs[0] = leftStrs[0].slice(index + 2);
-                    __setMoves(thisMove, leftStr, isOther);
-                    isOther = false;
+                    lastMove.setNext(newMove);
                 }
+                isFirst = false;
+                lastMove = newMove;
+            }
+            return lastMove;
+        }
+
+        let moverg = / ([^\.\{\}\s]{4})(?= )(?:\s+\{([\s\S]*?)\})?/gm; // 插入:(?= )
+        //# 走棋信息 (?:pattern)匹配pattern,但不获取匹配结果;  注解[\s\S]*?: 非贪婪
+        let thisMove, leftStr, index;
+        let othMoves = [this];
+        let isOther = false;
+        let leftStrs = moveStr.split(/\(\d+\./gm);
+        //# 如果注解里存在‘\(\d+\.’的情况，则可能会有误差
+        let rightrg = ') ';
+        while (leftStrs.length > 0) {
+            thisMove = isOther ? othMoves[othMoves.length - 1] : othMoves.pop();
+            index = leftStrs[0].indexOf(rightrg);
+            if (index < 0) {
+                //不存在'\) '的情况；# 如果注解里存在'\) '的情况，则可能会有误差                
+                othMoves.push(__setMoves(thisMove, leftStrs.shift(), isOther));
+                isOther = true;
+            } else {
+                leftStr = leftStrs[0].slice(0, index);
+                leftStrs[0] = leftStrs[0].slice(index + 2);
+                __setMoves(thisMove, leftStr, isOther);
+                isOther = false;
+            }
+        }
+        this.initSet(this.__setSeat, fmt, board);
+    }
+
+    fromCC(moveStr, fmt, board) {
+
+        let __setMove = (move, row, col, isOther = False) => {
+            let zhStr = moves[row][col].match(moverg);
+            if (zhStr) {
+                let newMove = new Move();
+                newMove.stepNo = row;
+                newMove.zhStr = zhStr[0].slice(0, 4);
+                newMove.remark = rems[`(${row}, ${col})`] || '';
+                if (isOther) {
+                    move.setOther(newMove);
+                } else {
+                    move.setNext(newMove);
+                }
+                if (zhStr[0][4] === '…') {
+                    __setMove(newMove, row, col + 1, True);
+                }
+            } else if (isOther) {
+                while (moves[row][col][0] === '…') {
+                    col += 1;
+                }
+                __setMove(move, row, col, True);
+            }
+            if (zhStr && row < moves.length - 1 && moves[row + 1]) {
+                __setMove(newMove, row + 1, col);
             }
         }
 
-        let __fromCC = () => {
-
-            let __setMove = (move, row, col, isOther = False) => {
-                let zhStr = moves[row][col].match(moverg);
-                if (zhStr) {
-                    let newMove = new Move();
-                    newMove.stepNo = row;
-                    newMove.zhStr = zhStr[0].slice(0, 4);
-                    newMove.remark = rems[`(${row}, ${col})`] || '';
-                    if (isOther) {
-                        move.setOther(newMove);
-                    } else {
-                        move.setNext(newMove);
-                    }
-                    if (zhStr[0][4] == '…') {
-                        __setMove(newMove, row, col + 1, True);
-                    }
-                } else if (isOther) {
-                    while (moves[row][col][0] == '…') {
-                        col += 1;
-                    }
-                    __setMove(move, row, col, True);
+        let remstr;
+        [moveStr, remstr] = moveStr.split(/\n\(/gm, 2);
+        let moves = [],
+            rems = {};
+        if (moveStr) {
+            let moves = [];
+            let mstrrg = /.{5}/gm;
+            let moverg = /([^…　]{4}[…　])/gm;
+            let lineStr = moveStr.split(/\n/gm);
+            for (let i = 0; i < lineStr.length; i++) {
+                if (i % 2 === 0) {
+                    moves.push(lineStr[i].match(mstrrg));
                 }
-                if (zhStr && row < moves.length - 1 && moves[row + 1]) {
-                    __setMove(newMove, row + 1, col);
-                }
-            }
-
-            let remstr;
-            [moveStr, remstr] = moveStr.split(/\n\(/gm, 2);
-            let moves = [],
-                rems = {};
-            if (moveStr) {
-                let moves = [];
-                let mstrrg = /.{5}/gm;
-                let moverg = /([^…　]{4}[…　])/gm;
-                let lineStr = moveStr.split(/\n/gm);
-                for (let i = 0; i < lineStr.length; i++) {
-                    if (i % 2 == 0) {
-                        moves.push(lineStr[i].match(mstrrg));
-                    }
-                }
-            }
-            if (remstr) {
-                let remrg = /\(\s*(\d+),\s*(\d+)\): \{([\s\S]*?)\}/gm;
-                let rems = {};
-                for (let { rowstr, colstr, remark } of ('(' + remstr).match(remrg)) {
-                    rems[`(${rowstr}, ${colstr})`] = remark;
-                }
-                this.remark = rems['(0, 0)'] || '';
-            }
-            if (moves.length > 1) {
-                __setMove(this, 1, 0);
             }
         }
-
-        switch (fmt) {
-            case 'cc':
-                __fromCC();
-                break;
-            case 'zh':
-                __fromICCSZh();
-                break;
-            case 'ICCS': 
-                ;
-            default:
-                break;
+        if (remstr) {
+            let remrg = /\(\s*(\d+),\s*(\d+)\): \{([\s\S]*?)\}/gm;
+            let rems = {};
+            for (let { rowstr, colstr, remark } of ('(' + remstr).match(remrg)) {
+                rems[`(${rowstr}, ${colstr})`] = remark;
+            }
+            this.remark = rems['(0, 0)'] || '';
         }
-        this.__setSeatOrZhStrs('seats', fmt, board);
+        if (moves.length > 1) {
+            __setMove(this, 1, 0);
+        }
+        this.initSet(this.__setSeat, fmt, board);
     }
 }
 
@@ -372,7 +380,7 @@ class Moves {
     constructor() {
         this.rootMove = new Move();
         this.currentMove = this.rootMove;
-        this.firstColor = base.RED; // 棋局载入时需要设置此属性！    
+        this.firstColor = base.RED; // 棋局载入时需要设置此属性！ 
     }
 
     toString() {
@@ -380,7 +388,7 @@ class Moves {
 
         let __addstrl = (move, isOther = false) => {
             let boutNum = Math.floor((move.stepNo + 1) / 2);
-            let isEven = move.stepNo % 2 == 0;
+            let isEven = move.stepNo % 2 === 0;
             let preStr = isOther ? `(${boutNum}. ${isEven ? '... ' : ''}` : (isEven ? ' ' : `${boutNum}. `);
             movestrl.push(`${preStr}${move.getStr('zh')} ${__remarkstr(move)}`);
             if (move.other) {
@@ -473,18 +481,30 @@ class Moves {
     }
 
     setFromPgn(moveStr, fmt, board) {
-        this.rootMove.fromString(moveStr, fmt, board);
+        switch (fmt) {
+            case 'cc':
+                this.rootMove.fromCC(moveStr, fmt, board);
+                break;
+            case 'zh':
+                this.rootMove.fromICCSZh(moveStr, fmt, board);
+                break;
+            case 'ICCS': 
+                ;
+            default:
+                break;
+        }
         this.initNums(board);
     }
 
     setFromJSON(moveJSON, board) {
+        //this.rootMove = new Move();
         this.rootMove.fromJSON(moveJSON, board);
         this.initNums(board);
     }
 
     get currentColor() {
-        return this.currentMove.stepNo % 2 == 0 ? this.firstColor : (
-            c => c == base.RED ? base.BLACK : base.RED)(this.firstColor);
+        return this.currentMove.stepNo % 2 === 0 ? this.firstColor : (
+            c => c === base.RED ? base.BLACK : base.RED)(this.firstColor);
     }
 
     get isStart() {
