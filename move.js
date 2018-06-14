@@ -24,32 +24,20 @@ class Move {
 
     toJSON() {
         let __replace = (str) => {
-            str.replace(/\\n/gm, "\\\n");  //注意php中替换的时候只能用双引号"\n"
-            str.replace(/\\r/gm, "\\\r");    
-            //
-            //str.replace(/\n/gm, "\\n");  //注意php中替换的时候只能用双引号"\n"
-            //str.replace(/\r/gm, "\\r");            
-            str.replace(">", "&gt;");  
-            str.replace("<", "&lt;");  
-            str.replace(" ", "&nbsp;");  
-            //str.replace("\"", "&quot;");  
-            //str.replace("\'", "&#39;");  
-            //str.replace("\\", "\\\\");//对斜线的转义 
-            // 
+            str = str.replace(/\n/gm, "\\n");  //注意php中替换的时候只能用双引号"\n"
+            str = str.replace(/\r/gm, "\\r");            
+            //str = str.replace(">", "&gt;");  
+            //str = str.replace("<", "&lt;");  
+            //str = str.replace(" ", "&nbsp;");  
+            //str = str.replace("\"", "&quot;");  
+            //str = str.replace("\'", "&#39;");  
+            //str = str.replace("\\", "\\\\");//对斜线的转义
+            //console.log(str);
             return str;
         }
-        //console.log(__replace(this.remark));
-        return `{"fseat":${this.fseat},"tseat":${this.tseat},"remark":"${this.remark}","zhStr":"${this.zhStr}","other":${this.other && this.other.toJSON()},"next_":${this.next_ && this.next_.toJSON()}}`;
-    }
 
-    /*
-    toMove(key, value) {
-        if (key in ['next_', 'other']) {
-            return value && JSON.parse(value); //  如何把结果转为Move类？
-        }
-        return value;
+        return `{"fseat":${this.fseat},"tseat":${this.tseat},"remark":"${__replace(this.remark)}","zhStr":"${this.zhStr}","other":${this.other && this.other.toJSON()},"next_":${this.next_ && this.next_.toJSON()}}`;
     }
-    */
 
     toString() {
         return `{"stepNo":${this.stepNo},"othCol":${this.othCol},"maxCol":${this.maxCol},"fseat":${this.fseat},"tseat":${this.tseat},"zhStr":"${this.zhStr}","remark":"${this.remark}"}`;
@@ -109,7 +97,7 @@ class Move {
             seats = board.getSideNameSeats(color, name);
             if (base.PawnNames.has(name)) {
                 seats = board.sortPawnSeats(isBottomSide, seats);  //# 获取多兵的列                    
-                if (seats.length === 3 && name === '后')
+                if (seats.length >= 3 && zhStr[0] === '后')
                     index += 1;
             } else {                    
                 seats = board.getSideNameSeats(color, name);
@@ -142,10 +130,9 @@ class Move {
         }
         // 断言已通过
         //this.setZhStr(board);
-        //if (zhStr != this.zhStr)
-        //    console.log(zhStr, '=>', this.fseat, this.tseat, '=>', this.zhStr);
+        if (zhStr != this.zhStr)
+            console.log(zhStr, '=>', this.fseat, this.tseat, '=>', this.zhStr);
     }
-
 
     setICCS() {
         let fcol = ColChars.indexOf(Board.getCol(this.fseat)),
@@ -165,6 +152,7 @@ class Move {
         let fseat = this.fseat,
             tseat = this.tseat,
             fromPiece = board.getPiece(fseat),
+            //console.log(fromPiece);
             color = fromPiece.color,
             name = fromPiece.name,
             isBottomSide = board.isBottomSide(color),
@@ -217,13 +205,9 @@ class Move {
             }
         }
 
+        //console.log(JSON.parse(moveJSON));
         // # 驱动调用递归函数
-        console.log(moveJSON);
-        //let moveData = JSON.parse(moveJSON);
-        let moveData = JSON.parse(JSON.parse(moveJSON)); //
-        console.log(moveData, typeof moveData, moveData.remark); //
-        __init(this, moveData);  // 多次试验，不知为何需要两次解析？
-        //__init(this, JSON.parse(moveJSON));
+        __init(this, JSON.parse(JSON.parse(moveJSON)));  // 多次试验，不知为何需要两次解析？
     }
     
     // （rootMove）调用
@@ -437,44 +421,26 @@ class Moves {
         } // # 驱动调用递归函数            
     }
 
-
-
     setFromPgn(moveStr, fmt, board) {        
         // （rootMove）调用, 设置树节点的seat or zhStr'
-        let initSet = (move, fmt, board) => {
-            let __set = (move) => {
-                setFunc.call(move, board);
-                board.__go(move);
-                if (move.next_)
-                    __set(move.next_);
-                board.__back(move);
-                if (move.other)
-                    __set(move.other);
-            }
-            
-            let setFunc = move.setSeatFromZhStr;
-            if (fmt === 'ICCS') {
-                setFunc = move.setSeatFromICCS;
-            }
-            // # 驱动调用递归函数
-            if (move.next_) { //# and this.movcount < 300: # 步数太多则太慢             
-                __set(move.next_);
-            }
+        let __setSeat = (move) => {
+            setSeatFunc.call(move, board);
+            board.__go(move);
+            if (move.next_)
+                __setSeat(move.next_);
+            board.__back(move);
+            if (move.other)
+                __setSeat(move.other);
         }
 
         this.__init();
-        switch (fmt) {
-            case 'cc': {
-                this.rootMove.fromCC(moveStr, board);
-                break;
-            }
-            case 'ICCS':
-            case 'zh': {
-                this.rootMove.fromICCSZh(moveStr, board);
-                break;
-            }
+        let fromStrFunc = fmt === 'cc' ? this.rootMove.fromCC : this.rootMove.fromICCSZh;
+        fromStrFunc.call(this.rootMove, moveStr, board);
+        let setSeatFunc = fmt === 'ICCS' ? this.rootMove.setSeatFromICCS : this.rootMove.setSeatFromZhStr;
+        // # 驱动调用递归函数
+        if ( this.rootMove.next_) { //# and this.movcount < 300: # 步数太多则太慢             
+            __setSeat(this.rootMove.next_);
         }
-        initSet(this.rootMove, fmt, board);
         this.initNums(board);
     }
 
@@ -571,7 +537,7 @@ class Moves {
     addMove(fseat, tseat, remark, board, isOther = false) {
         let move = new Move();
         [move.fseat, move.tseat, move.remark] = [fseat, tseat, remark]; // 调用参数同此规格
-        move.__setZhStr(board);
+        move.setZhStr(board);
         if (isOther) {
             this.currentMove.setOther(move);
             this.forwardOther(board);

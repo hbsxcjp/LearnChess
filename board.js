@@ -535,7 +535,7 @@ class Board {
         }  // 列内排序
         let pawnSeatArray = [...pawnSeatMap].filter(([c, s]) => s.length > 1);
         pawnSeatArray = pawnSeatArray.sort((a, b) => a[0] - b[0]);
-        for (let { col, seats } of pawnSeatArray.entries()) {
+        for (let [ col, seats ] of pawnSeatArray.entries()) {
             result.concat(seats);
         }  // 按列排序
         return isBottomSide ? result.reverse() : result;

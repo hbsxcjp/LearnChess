@@ -48,13 +48,14 @@ class ChessInstance {
         fileDisplay.appendChild(document.createTextNode(`${this.toString()}`));
 
         let moveJSON = JSON.stringify(this.moves.rootMove);
-        //console.log(moveJSON);
-        //console.log(JSON.parse(moveJSON));//.toLocaleString()
+        //console.log(this.info.info['Title']);
+        //console.log(this.board.toString());//.toLocaleString()
         this.moves.setFromJSON(moveJSON, this.board);
         //console.log(this.moves.toString());
         //console.log(this.moves.toLocaleString());
         //console.log(this.toString());
-        console.log(this.toLocaleString());
+        //console.log(this.toLocaleString());
+
     }
 
     readFile() {
