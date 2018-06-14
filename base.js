@@ -56,7 +56,7 @@ function xmlIndent(elem, islast = False, level = 0) {
         elem.text = '{}\t'.format(
             tabstr if __isblank(elem.text) else __addblank(elem.text))
     for n, e in enumerate(elem):
-        xmlindent(e, bool(len(elem) - 1 == n), level + 1)
+        xmlindent(e, bool(len(elem) - 1 === n), level + 1)
     elem.tail = __cuttab(
         tabstr if __isblank(elem.tail) else __addblank(elem.tail), islast)
         */

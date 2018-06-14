@@ -59,7 +59,7 @@ class Board {
     }
 
     static isSameCol(seat, othseat) {
-        return Board.getCol(seat) == Board.getCol(othseat);
+        return Board.getCol(seat) === Board.getCol(othseat);
     }
 
     static getSameColSeats(seat, othseat) {
@@ -83,19 +83,19 @@ class Board {
         let row = Board.getRow(seat);
         let col = Board.getCol(seat);
         let mvseats, seats;
-        if (col == 4) {
+        if (col === 4) {
             mvseats = [E, S, W, N];
         }
-        else if (col == 3) {
+        else if (col === 3) {
             mvseats = [E, S, N];
         }
         else {
             mvseats = [W, S, N];
         }
-        if (row == 0 || row == 7) {
+        if (row === 0 || row === 7) {
             seats = new Set([E, W, N]);
         }
-        else if (row == 2 || row == 9) {
+        else if (row === 2 || row === 9) {
             seats = new Set([S, W, N]);
         }
         else {
@@ -111,11 +111,11 @@ class Board {
             WN = seat + 9 - 1;
         let row = Board.getRow(seat);
         let col = Board.getCol(seat);
-        if (col == 4) {
+        if (col === 4) {
             return [EN, ES, WS, WN];
         }
-        else if (col == 3) {
-            if (row == 0 || row == 7) {
+        else if (col === 3) {
+            if (row === 0 || row === 7) {
                 return [EN];
             }
             else {
@@ -123,7 +123,7 @@ class Board {
             }
         }
         else {
-            if (row == 0 || row == 7) {
+            if (row === 0 || row === 7) {
                 return [WN];
             }
             else {
@@ -141,16 +141,16 @@ class Board {
         let row = Board.getRow(seat);
         let col = Board.getCol(seat);
         let mvseats;
-        if (col == base.maxColNo) {
+        if (col === base.maxColNo) {
             mvseats = [WS, WN];
         }
-        else if (col == base.MinColNo) {
+        else if (col === base.MinColNo) {
             mvseats = [ES, EN];
         }
-        else if (row == 0 || row == 5) {
+        else if (row === 0 || row === 5) {
             mvseats = [EN, WN];
         }
-        else if (row == 4 || row == 9) {
+        else if (row === 4 || row === 9) {
             mvseats = [ES, WS];
         }
         else {
@@ -169,7 +169,7 @@ class Board {
             else if (x < -9 - 2) {
                 return first - 9;
             }
-            else if (x == 9 + 2 || x == -9 + 2) {
+            else if (x === 9 + 2 || x === -9 + 2) {
                 return first + 1;
             }
             else {
@@ -259,11 +259,11 @@ class Board {
                 mvseats = [E, S, W, N];
         }
         let row = Board.getRow(seat);
-        if (row == 9 || row == 0) {
+        if (row === 9 || row === 0) {
             seats = new Set([E, W]);
         }
         else {
-            if (this.getSide(this.getColor(seat)) == 'bottom') {
+            if (this.getSide(this.getColor(seat)) === 'bottom') {
                 seats = new Set([E, W, N]);
             }
             else {
@@ -283,7 +283,7 @@ class Board {
         function __getname(piece) {
             let rcpName = { '车': '車', '马': '馬', '炮': '砲' };
             let name = piece.name;
-            return (piece.color == base.BLACK && name in rcpName) ? rcpName[name] : name;
+            return (piece.color === base.BLACK && name in rcpName) ? rcpName[name] : name;
         }
 
         let lineStr = base.BlankBoard.trim().split('\n').map(line => [...line.trim()]);
@@ -295,7 +295,7 @@ class Board {
     }
 
     isBottomSide(color) {
-        return this.bottomSide == color;
+        return this.bottomSide === color;
     }
 
     isBlank(seat) {
@@ -335,16 +335,16 @@ class Board {
     }
 
     getLiveSidePieces(color) {
-        return this.getLivePieces().filter(p => p.color == color);
+        return this.getLivePieces().filter(p => p.color === color);
     }
 
     getSideNameSeats(color, name) {
         return this.getLiveSidePieces(color).filter(
-            p => p.name == name).map(p => this.getSeat(p));
+            p => p.name === name).map(p => this.getSeat(p));
     }
 
     getSideNameColSeats(color, name, col) {
-        return this.getSideNameSeats(color, name).filter(s => Board.getCol(s) == col);
+        return this.getSideNameSeats(color, name).filter(s => Board.getCol(s) === col);
     }
 
     getEatedPieces() {
@@ -353,7 +353,7 @@ class Board {
     }
 
     isKilled(color) {
-        let otherColor = color == base.BLACK ? base.RED : base.BLACK;
+        let otherColor = color === base.BLACK ? base.RED : base.BLACK;
         let kingSeat = this.getKingSeat(color);
         let otherSeat = this.getKingSeat(otherColor);
         if (Board.isSameCol(kingSeat, otherSeat)) {  // 将帅是否对面
@@ -438,9 +438,9 @@ class Board {
     getFen(chessInstance) {
         let currentMove = this.currentMove;
         chessInstance.moves.toFirst(chessInstance.board);
-        let fen = `${this.__fen()} ${this.firstColor == base.BLACK ? 'b' : 'r'} - - 0 0`;
+        let fen = `${this.__fen()} ${this.firstColor === base.BLACK ? 'b' : 'r'} - - 0 0`;
         chessInstance.moves.goTo(currentMove, chessInstance.board);
-        //assert this.info['FEN'] == fen, '\n原始:{}\n生成:{}'.format(this.info['FEN'], fen)
+        //assert this.info['FEN'] === fen, '\n原始:{}\n生成:{}'.format(this.info['FEN'], fen)
         return fen;
     }
 
@@ -484,7 +484,7 @@ class Board {
             seatChars.push([i, charls[i]]);
         }
         this.setSeatPieces(chessInstance.pieces.seatPieces(seatChars));
-        this.firstColor = afens[1] == 'b' ? base.BLACK : base.RED;
+        this.firstColor = afens[1] === 'b' ? base.BLACK : base.RED;
         this.currentMove = this.rootMove;
     }
 
@@ -508,14 +508,14 @@ class Board {
         let currentMove = this.currentMove;
         chessInstance.moves.toFirst();
         let seatPieces;
-        if (changeType == 'exchange') {
-            this.firstColor = this.firstColor == base.BLACK ? base.RED : base.BLACK;
+        if (changeType === 'exchange') {
+            this.firstColor = this.firstColor === base.BLACK ? base.RED : base.BLACK;
             seatPieces = this.getLivePieces().map(
                 p => [this.getSeat(piece), chessInstance.pieces.getOthSidePiece(piece)]);
         } else {
             let rotateSeat = (s) => Math.abs(s - 89);
             let symmetrySeat = (s) => (Math.floor(s / 9) + 1) * 9 - s % 9 - 1;
-            let transfun = changeType == 'rotate' ? rotateSeat : symmetrySeat;
+            let transfun = changeType === 'rotate' ? rotateSeat : symmetrySeat;
             __changeSeat(transfun); // 转换move的seat值
             seatPieces = this.getLivePieces().map(p => [transfun(this.getSeat(piece)), piece]);
         }

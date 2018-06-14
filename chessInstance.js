@@ -14,6 +14,7 @@ class ChessInstance {
         this.info = new Info();
         this.moves = new Moves();
         document.getElementById("fileInput").addEventListener("change", this.readFile(), false);
+        //document.body.addEventListener("load", this.readFile());
     }
 
     toString() {
@@ -39,22 +40,21 @@ class ChessInstance {
         if (resultStr != null) {
             this.info.info['Result'] = resultStr[1];
         } //  # 棋局结果
-        let remark = infoStr.match(/\{([\s\S]*?)\}/gm);
-        if (remark) {
-            this.moves.rootMove.remark = remark[0];
-        }
+        let remark = infoStr.match(/\{([\s\S]*?)\}/m);
+        this.moves.rootMove.remark = remark ? remark[1] : ''; // 0:匹配文本，1:圆括号内文本        
 
         let fileDisplay = document.getElementById("fileDisplay");
         fileDisplay.innerHTML = '';
         fileDisplay.appendChild(document.createTextNode(`${this.toString()}`));
 
-        //let moveJSON = JSON.stringify(this.moves.rootMove, null, 4);
-        //console.log(JSON.parse(moveJSON).toLocaleString());
-        //this.moves.setFromJSON(moveJSON, this.board);
+        let moveJSON = JSON.stringify(this.moves.rootMove);
+        //console.log(moveJSON);
+        //console.log(JSON.parse(moveJSON));//.toLocaleString()
+        this.moves.setFromJSON(moveJSON, this.board);
         //console.log(this.moves.toString());
-        console.log(this.moves.toLocaleString());
+        //console.log(this.moves.toLocaleString());
         //console.log(this.toString());
-        //console.log(this.toLocaleString());
+        console.log(this.toLocaleString());
     }
 
     readFile() {
