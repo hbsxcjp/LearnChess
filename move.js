@@ -370,9 +370,13 @@ class Move {
 // 棋局着法树类
 class Moves {
     constructor() {
+        this.__init();
+    }
+
+    __init() {
         this.rootMove = new Move();
         this.currentMove = this.rootMove;
-        this.firstColor = base.RED; // 棋局载入时需要设置此属性！    
+        this.firstColor = base.RED; // 棋局载入时需要设置此属性！
     }
 
     toString() {
@@ -473,11 +477,13 @@ class Moves {
     }
 
     setFromPgn(moveStr, fmt, board) {
+        this.__init();
         this.rootMove.fromString(moveStr, fmt, board);
         this.initNums(board);
     }
 
     setFromJSON(moveJSON, board) {
+        this.__init();
         this.rootMove.fromJSON(moveJSON, board);
         this.initNums(board);
     }
@@ -507,7 +513,7 @@ class Moves {
     }
 
     // 基本走法
-    go(board) {
+    forward(board) {
         if (this.currentMove.next_) {
             this.currentMove = this.currentMove.next_;
             board.__go(this.currentMove);            
@@ -523,7 +529,7 @@ class Moves {
     }
 
     // 基本走法
-    goOther(board) {
+    forwardOther(board) {
         //'移动到当前节点的另一变着'
         if (this.currentMove.other) {
             let toMove = this.currentMove.other;
@@ -534,7 +540,7 @@ class Moves {
     }
 
     // 复合走法
-    goTo(move, board) {
+    to(move, board) {
         if (move === this.currentMove) return;
         this.toFirst(board);
         this.getPrevMoves(move).forEach(m => board.__go(m));
@@ -551,16 +557,16 @@ class Moves {
     // 复合走法
     toLast(board) {
         while (this.currentMove.next_) {
-            this.go(board);
+            this.forward(board);
         }
     }
 
     // 复合走法
-    toStep(board, inc = 1) {
-        let go = inc > 0;
+    go(board, inc = 1) {
+        let forward = inc > 0;
         inc = abs(inc);
         for (let i = 0; i < inc; i++) {
-            if (go) this.go(board);
+            if (forward) this.forward(board);
             else this.back(board);
         }
     }
@@ -572,10 +578,10 @@ class Moves {
         move.__setZhStr(board);
         if (isOther) {
             this.currentMove.setOther(move);
-            this.goOther(board);
+            this.forwardOther(board);
         } else {
             this.currentMove.setNext(move);
-            this.go(board);
+            this.forward(board);
         }
     }
 
