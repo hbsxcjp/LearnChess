@@ -528,12 +528,17 @@ class Board {
     }
 
     sortPawnSeats(isBottomSide, pawnSeats) {   //     '多兵排序'
-        let result = [];
+        let result = [],
+            pawnSeatArray = [];
         let pawnSeatMap = new Map(pawnSeats.map(s => [Board.getCol(s), []]));
         for (let seat of pawnSeats) {
             pawnSeatMap.get(Board.getCol(seat)).push(seat);
-        }  // 列内排序
-        let pawnSeatArray = [...pawnSeatMap].filter(([c, s]) => s.length > 1);
+        }  // 列内排序        
+        pawnSeatMap.forEach((seats) => {
+            if (seats.length > 1) {
+                pawnSeatArray.push(seats);
+            }
+        }); 
         pawnSeatArray = pawnSeatArray.sort((a, b) => a[0] - b[0]);
         for (let [ col, seats ] of pawnSeatArray.entries()) {
             result.concat(seats);

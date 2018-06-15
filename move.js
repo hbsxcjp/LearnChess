@@ -97,7 +97,7 @@ class Move {
             seats = board.getSideNameSeats(color, name);
             if (base.PawnNames.has(name)) {
                 seats = board.sortPawnSeats(isBottomSide, seats);  //# 获取多兵的列                    
-                if (seats.length >= 3 && zhStr[0] === '后')
+                if (seats.length === 3 && zhStr[0] === '后')
                     index += 1;
             } else {                    
                 seats = board.getSideNameSeats(color, name);
