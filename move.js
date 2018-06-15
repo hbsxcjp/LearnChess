@@ -111,7 +111,7 @@ class Move {
         }
         //if (seats.length === 0) console.log(`没有找到棋子 => ${zhStr} color:${color} name: ${name}\n${board}`);
         this.fseat = fseat = seats[index];
-
+        
         // '根据中文行走方向取得棋子的内部数据方向（进：1，退：-1，平：0）'
         let movDir = base.Direction_Num[zhStr[2]] * (isBottomSide ? 1 : -1);
         let num = __getNum(zhStr[3])
@@ -128,6 +128,9 @@ class Move {
             this.tseat = Board.getSeat(Board.getRow(fseat) + movDir * inc, toCol);
             //console.log(this.tseat);
         }
+        if (typeof fseat !== 'number' || typeof this.tseat !== 'number')
+            console.log(board.toString(), zhStr, fseat, this.tseat);
+
         // 断言已通过
         //this.setZhStr(board);
         if (zhStr != this.zhStr)
@@ -231,7 +234,9 @@ class Move {
             return lastMove;
         }
 
-        let moverg = / ([^\.\{\}\s]{4})(?= )(?:\s+\{([\s\S]*?)\})?/gm; // 插入:(?= )
+        //console.log(moveStr);
+        //let moverg = / ([\u4E00-\u9FA5]{4})(?:\s+\{([\s\S]*?)\})?/ugm; // 第一届“嘉宝杯”粤沪象棋对抗赛 - 上海胡荣华 (先和) 广东吕钦： 出现“审形度势”的错误！
+        let moverg = / ([^\.\{\}\s/-]{4})(?:\s+\{([\s\S]*?)\})?/gm; // 插入:(?= )
         //# 走棋信息 (?:pattern)匹配pattern,但不获取匹配结果;  注解[\s\S]*?: 非贪婪
         let thisMove, leftStr, index;
         let othMoves = [this];

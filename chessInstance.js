@@ -32,7 +32,8 @@ class ChessInstance {
     }
 
     readPgn(pgnText) {
-        let [infoStr, moveStr] = pgnText.split('\n1\.');
+        //console.log(pgnText);
+        let [infoStr, moveStr] = pgnText.split(/[\s]+1\./m);
         this.info.setFromPgn(infoStr);
         this.board.setFen(this);
         this.moves.setFromPgn(moveStr, this.info.info['Format'], this.board);
@@ -47,6 +48,7 @@ class ChessInstance {
         fileDisplay.innerHTML = '';
         fileDisplay.appendChild(document.createTextNode(`${this.toString()}`));
 
+        //console.log(this.toLocaleString());
         let moveJSON = JSON.stringify(this.moves.rootMove);
         //console.log(this.info.info['Title']);
         //console.log(this.board.toString());//.toLocaleString()

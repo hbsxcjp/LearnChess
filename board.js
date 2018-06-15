@@ -527,22 +527,33 @@ class Board {
         }
     }
 
-    sortPawnSeats(isBottomSide, pawnSeats) {   //     '多兵排序'
+    // '多兵排序'
+    sortPawnSeats(isBottomSide, pawnSeats) {   
         let result = [],
-            pawnSeatArray = [];
-        let pawnSeatMap = new Map(pawnSeats.map(s => [Board.getCol(s), []]));
-        for (let seat of pawnSeats) {
-            pawnSeatMap.get(Board.getCol(seat)).push(seat);
-        }  // 列内排序        
-        pawnSeatMap.forEach((seats) => {
+            pawnSeatArray = [],
+            pawnSeatMap = new Map();
+        // 按列建立字典
+        pawnSeats.forEach(seat => {
+            let col = Board.getCol(seat);
+            if (pawnSeatMap.get(col)) {
+                pawnSeatMap.get(col).push(seat);
+            } else {
+                pawnSeatMap.set(col, [seat]);
+            }
+        });
+        // 筛除只有一个位置的列       
+        pawnSeatMap.forEach((seats, key) => {
             if (seats.length > 1) {
-                pawnSeatArray.push(seats);
+                pawnSeatArray.push([key, seats]);
             }
         }); 
-        pawnSeatArray = pawnSeatArray.sort((a, b) => a[0] - b[0]);
-        for (let [ col, seats ] of pawnSeatArray.entries()) {
-            result.concat(seats);
-        }  // 按列排序
+        // 按列排序
+        pawnSeatArray = pawnSeatArray.sort((a, b) => a[0] - b[0]); 
+        // 各列位置整合成一个数组
+        pawnSeatArray.forEach(key_seats => {
+            result = result.concat(key_seats[1]);
+        });
+        // 根据棋盘顶底位置,是否反序
         return isBottomSide ? result.reverse() : result;
     }
 
