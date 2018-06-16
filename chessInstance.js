@@ -13,6 +13,7 @@ class ChessInstance {
         this.board = new Board();
         this.info = new Info();
         this.moves = new Moves();
+        
         document.getElementById("fileInput").addEventListener("change", this.readFile(), false);
         //document.body.addEventListener("load", this.readFile());
     }
@@ -32,11 +33,13 @@ class ChessInstance {
     }
 
     readPgn(pgnText) {
-        //console.log(pgnText);
-        let [infoStr, moveStr] = pgnText.split(/[\s]+1\./m);
+        let [infoStr, moveStr] = base.partition(pgnText, /\s+1\./);
+        //console.log(infoStr);
+        console.log(moveStr);
         this.info.setFromPgn(infoStr);
         this.board.setFen(this);
-        this.moves.setFromPgn(moveStr, this.info.info['Format'], this.board);
+
+        this.moves.setFrom(moveStr, this.board, this.info.info['Format']);
         let resultStr = moveStr.match(/\s(1-0|0-1|1\/2-1\/2|\*)(?!\S)/m);
         if (resultStr != null) {
             this.info.info['Result'] = resultStr[1];
@@ -48,19 +51,21 @@ class ChessInstance {
         fileDisplay.innerHTML = '';
         fileDisplay.appendChild(document.createTextNode(`${this.toString()}`));
 
-        //console.log(this.toLocaleString());
         let moveJSON = JSON.stringify(this.moves.rootMove);
-        //console.log(this.info.info['Title']);
+        console.log(this.info.info['Title'], moveJSON.length);
         //console.log(this.board.toString());//.toLocaleString()
-        this.moves.setFromJSON(moveJSON, this.board);
-        //console.log(this.moves.toString());
-        //console.log(this.moves.toLocaleString());
-        //console.log(this.toString());
-        //console.log(this.toLocaleString());
+        //this.moves.setFrom(moveJSON, this.board, 'JSON');
 
+        [infoStr, moveStr] = base.partition(this.moves.toLocaleString(), /\s+1\./);
+        this.moves.setFrom(moveStr, this.board, 'cc');
+        //this.moves.setFromJSON(moveJSON, this.board);
+        //console.log(this.toString());
+        //console.log(this.toLocaleString());         
+        console.log((new Date).getTime() - this.time, "ms");
     }
 
     readFile() {
+        this.time = (new Date).getTime();
         let files = document.getElementById("fileInput").files;
         for (let file of files) {
             let reader = new FileReader();
@@ -69,7 +74,7 @@ class ChessInstance {
                 this.readPgn(reader.result);
             }
             reader.onerror = (e) => console.log("Error", e);
-        }
+        }        
     }
 
     loadViews(views) {

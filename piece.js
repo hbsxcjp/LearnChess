@@ -23,86 +23,82 @@ class Piece {
         return base.CharNames[this._char];
     }
 
-    isKing() {
-        return base.KingChars.has(this._char);
+    get isKing() {
+        return base.KingNames.has(this.name);
     }
 
-    isStronge() {
-        return base.StrongeChars.has(this._char);
+    get isStronge() {
+        return base.StrongeNames.has(this.name);
     }
 
     // 棋子的全部活动位置(默认：车马炮的活动范围)
-    getCanSeats(seats, side = '') {
-        return seats.allSeats();
-    }
-
-    // 筛除被棋子阻挡的目标位置
-    filterObstacleSeats(m_bSeats, seats) {
-        return m_bSeats.filter(ss => seats.isBlank(ss[1])).map(s => s[0]);
+    getCanSeats() {
+        return Board.allSeats();
     }
 
     // 筛除本方棋子占用的目标位置
-    filterColorSeats(moveSeats, seats) {
-        return moveSeats.filter(s => seats.getColor(s) != this._color);
+    filterColorSeats(moveSeats, board) {
+        return moveSeats.filter(s => board.getColor(s) != this._color);
     }
 
-    // 获取有效活动的目标位置
-    getMoveSeats(seats) {
-        return [];
-    }
 }
 
 class King extends Piece {
-    getCanSeats(seats) {
-        return seats.kingSeats()[seats.getSide(this._color)];
+    getCanSeats(board) {
+        return Board.kingSeats()[board.getSide(this._color)];
     }
 
-    getMoveSeats(seats) {
+    getMoveSeats(board) {
         return this.filterColorSeats(
-            Seats.getKingMoveSeats(seats.getSeat(this)), seats);
+            Board.getKingMoveSeats(board.getSeat(this)), board);
     }
 }
 
 class Advisor extends Piece {
-    getCanSeats(seats) {
-        return seats.advisorSeats()[seats.getSide(this._color)];
+    getCanSeats(board) {
+        return Board.advisorSeats()[board.getSide(this._color)];
     }
 
-    getMoveSeats(seats) {
+    getMoveSeats(board) {
         return this.filterColorSeats(
-            Seats.getAdvisorMoveSeats(seats.getSeat(this)), seats);
+            Board.getAdvisorMoveSeats(board.getSeat(this)), board);
     }
 }
 
 class Bishop extends Piece {
-    getCanSeats(seats) {
-        return seats.bishopSeats()[seats.getSide(this._color)];
+    // 筛除被棋子阻挡的目标位置
+    static filterObstacleSeats(m_bSeats, board) {
+        return m_bSeats.filter(s => board.isBlank(s[1])).map(s => s[0]);
     }
 
-    getMoveSeats(seats) {
-        return this.filterColorSeats(this.filterObstacleSeats(
-            Seats.getBishopMove_CenSeats(seats.getSeat(this)), seats), seats);
+    getCanSeats(board) {
+        return Board.bishopSeats()[board.getSide(this._color)];
+    }
+
+    getMoveSeats(board) {
+        return this.filterColorSeats(Bishop.filterObstacleSeats(
+            Board.getBishopMove_CenSeats(board.getSeat(this)), board), board);
     }
 }
 
 class Knight extends Piece {
-    getMoveSeats(seats) {
-        return this.filterColorSeats(this.filterObstacleSeats(
-            Seats.getKnightMove_LegSeats(seats.getSeat(this)), seats), seats);
+    getMoveSeats(board) {
+        return this.filterColorSeats(Bishop.filterObstacleSeats(
+            Board.getKnightMove_LegSeats(board.getSeat(this)), board), board);
     }
 }
 
 class Rook extends Piece {
-    getMoveSeats(seats) {
+    getMoveSeats(board) {
         let moveSeats = new Array();
-        let seatLines = Seats.RookCannonMoveSeat_Lines(seats.getSeat(this));
+        let seatLines = Board.RookCannonMoveSeat_Lines(board.getSeat(this));
         for (const seatLine of seatLines) {
             for (const seat of seatLine) {
-                if (seats.isBlank(seat)) {
+                if (board.isBlank(seat)) {
                     moveSeats.push(seat);
                 }
                 else {
-                    if (seats.getColor(seat) != this._color) {
+                    if (board.getColor(seat) != this._color) {
                         moveSeats.push(seat);
                     }
                     break;
@@ -114,22 +110,22 @@ class Rook extends Piece {
 }
 
 class Cannon extends Piece {
-    getMoveSeats(seats) {
+    getMoveSeats(board) {
         let moveSeats = new Array();
-        let seatLines = Seats.RookCannonMoveSeat_Lines(seats.getSeat(this));
+        let seatLines = Board.getRookCannonMoveSeat_Lines(board.getSeat(this));
         for (const seatLine of seatLines) {
             let skip = false;
             for (const seat of seatLine) {
                 if (!skip) {
-                    if (seats.isBlank(seat)) {
+                    if (board.isBlank(seat)) {
                         moveSeats.push(seat);
                     }
                     else {
                         skip = true;
                     }
                 }
-                else if (!seats.isBlank(seat)) {
-                    if (seats.getColor(seat) != this._color) {
+                else if (!board.isBlank(seat)) {
+                    if (board.getColor(seat) != this._color) {
                         moveSeats.push(seat);
                     }
                     break;
@@ -141,12 +137,12 @@ class Cannon extends Piece {
 }
 
 class Pawn extends Piece {
-    getCanSeats(seats) {
-        return seats.pawnSeats()[seats.getSide(this._color)];
+    getCanSeats(board) {
+        return Board.pawnSeats()[board.getSide(this._color)];
     }
 
-    getMoveSeats(seats) {
-        return this.filterColorSeats(seats.getPawnMoveSeats(seats.getSeat(this)));
+    getMoveSeats(board) {
+        return this.filterColorSeats(Board.getPawnMoveSeats(board.getSeat(this)));
     }
 }
 

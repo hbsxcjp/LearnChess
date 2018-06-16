@@ -1,8 +1,8 @@
 //中国象棋基础信息 by-cjp
 
 export {
-    View, range, multRepl, xmlIndent,
-    BLACK, RED, CharNames, KingChars, StrongeChars,
+    View, range, partition, multRepl, xmlIndent,
+    BLACK, RED, CharNames, KingNames, StrongeNames,
     PieceNames, LineMovePieceNames, AdvisorBishopNames, PawnNames,
     NumCols, NumRows, maxColNo, MinColNo,
     Num_Chinese, Chinese_Index, Direction_Num, FEN, BlankBoard, ColChars
@@ -28,6 +28,11 @@ function range(from, end) {
     return array;
 }
 
+// 分割字符串为两段
+function partition(fullStr, subStrReg) {
+    let index = fullStr.search(subStrReg);
+    return [fullStr.slice(0, index), fullStr.slice(index)];
+}
 
 // 一次替换多个子字符串（字典定义）（方法来源于PythonCook）
 function multRepl(text, replStrs) {
@@ -72,8 +77,8 @@ const CharNames = {
     'r': '车', 'c': '炮', 'p': '卒', '_': ''
 };
 // 全部棋子ch值与中文名称映射字典
-const KingChars = new Set('kK');
-const StrongeChars = new Set('rncpRNCP');
+const KingNames = new Set('帅将');
+const StrongeNames = new Set('马车炮兵卒');
 const PieceNames = new Set('帅仕相马车炮兵将士象卒');
 const LineMovePieceNames = new Set('帅车炮兵将卒');
 const AdvisorBishopNames = new Set('仕相士象');

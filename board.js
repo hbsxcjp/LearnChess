@@ -273,10 +273,32 @@ class Board {
         return mvseats.filter(s => seats.has(s));
     }
 
+    // '多兵排序'
+    static sortPawnSeats(isBottomSide, pawnSeats) {
+        let temp = [],
+            result = [];
+        // 按列建立字典，按列排序
+        pawnSeats.forEach(seat => {
+            let col = Board.getCol(seat);
+            if (temp[col]) {
+                temp[col].push(seat);
+            } else {
+                temp[col] = [seat];
+            }
+        });
+        // 筛除只有一个位置的列, 整合成一个数组
+        temp.forEach(seats => {
+            if (seats.length > 1) {
+                result = result.concat(seats);
+            }
+        });
+        // 根据棋盘顶底位置,是否反序
+        return isBottomSide ? result.reverse() : result;        
+    }
+
     constructor() {
         this.pies = new Array(90);
         this.bottomSide = base.RED;
-
     }
 
     toString() {
@@ -322,7 +344,7 @@ class Board {
         let piece;
         for (let seat of Board.kingSeats()[this.getSide(color)]) {
             piece = this.getPiece(seat);
-            if (Boolean(piece) && piece.isKing()) {
+            if (Boolean(piece) && piece.isKing) {
                 return seat;
             }
         }
@@ -361,7 +383,7 @@ class Board {
                 return true;
             }
             for (let piece of this.getLiveSidePieces(otherColor)) {
-                if (piece.isStronge() && (piece.getMoveSeats(this).indexOf(kingSeat) >= 0)) {
+                if (piece.isStronge && (piece.getMoveSeats(this).indexOf(kingSeat) >= 0)) {
                     return true;
                 }
             }
@@ -438,7 +460,7 @@ class Board {
     getFen(chessInstance) {
         let currentMove = this.currentMove;
         chessInstance.moves.toFirst(chessInstance.board);
-        let fen = `${this.__fen()} ${this.firstColor === base.BLACK ? 'b' : 'r'} - - 0 0`;
+        let fen = `${this.__fen()} ${chessInstance.moves.firstColor === base.BLACK ? 'b' : 'r'} - - 0 0`;
         chessInstance.moves.goTo(currentMove, chessInstance.board);
         //assert this.info['FEN'] === fen, '\n原始:{}\n生成:{}'.format(this.info['FEN'], fen)
         return fen;
@@ -484,7 +506,7 @@ class Board {
             seatChars.push([i, charls[i]]);
         }
         this.setSeatPieces(chessInstance.pieces.seatPieces(seatChars));
-        this.firstColor = afens[1] === 'b' ? base.BLACK : base.RED;
+        chessInstance.moves.firstColor = afens[1] === 'b' ? base.BLACK : base.RED;
         this.currentMove = this.rootMove;
     }
 
@@ -509,7 +531,8 @@ class Board {
         chessInstance.moves.toFirst();
         let seatPieces;
         if (changeType === 'exchange') {
-            this.firstColor = this.firstColor === base.BLACK ? base.RED : base.BLACK;
+            //chessInstance.info.info['FEN'] 需要更改
+            chessInstance.moves.firstColor = chessInstance.moves.firstColor === base.BLACK ? base.RED : base.BLACK;
             seatPieces = this.getLivePieces().map(
                 p => [this.getSeat(piece), chessInstance.pieces.getOthSidePiece(piece)]);
         } else {
@@ -527,35 +550,6 @@ class Board {
         }
     }
 
-    // '多兵排序'
-    sortPawnSeats(isBottomSide, pawnSeats) {   
-        let result = [],
-            pawnSeatArray = [],
-            pawnSeatMap = new Map();
-        // 按列建立字典
-        pawnSeats.forEach(seat => {
-            let col = Board.getCol(seat);
-            if (pawnSeatMap.get(col)) {
-                pawnSeatMap.get(col).push(seat);
-            } else {
-                pawnSeatMap.set(col, [seat]);
-            }
-        });
-        // 筛除只有一个位置的列       
-        pawnSeatMap.forEach((seats, key) => {
-            if (seats.length > 1) {
-                pawnSeatArray.push([key, seats]);
-            }
-        }); 
-        // 按列排序
-        pawnSeatArray = pawnSeatArray.sort((a, b) => a[0] - b[0]); 
-        // 各列位置整合成一个数组
-        pawnSeatArray.forEach(key_seats => {
-            result = result.concat(key_seats[1]);
-        });
-        // 根据棋盘顶底位置,是否反序
-        return isBottomSide ? result.reverse() : result;
-    }
 
 }
 
